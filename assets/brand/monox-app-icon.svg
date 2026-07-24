@@ -1,9 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
-  <title id="title">MonoX favicon</title>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">MonoX app icon</title>
   <desc id="desc">The MonoX mark on an ink rounded square.</desc>
-  <rect width="64" height="64" fill="#07111F" />
-  <rect x="2" y="2" width="60" height="60" rx="14" fill="#0B1728" />
-  <g transform="translate(6.4 5) scale(.2)">
+  <rect width="1024" height="1024" fill="#07111F" />
+  <rect x="32" y="32" width="960" height="960" rx="224" fill="#0B1728" />
+  <g transform="translate(102 96) scale(3.2)">
     <g fill="#4F7CFF">
       <path d="m55 127 18-22 128 108-18 22z" />
       <path d="m183 105 18 22L73 235l-18-22z" />

@@ -140,6 +140,19 @@ test('rejects resource requests above limits and invalid HPA scale to zero', () 
   assert(result.errors.some((error) => error.path === '$.autoscaling.minReplicas'));
 });
 
+test('rejects rolling updates whose integer or percentage limits both resolve to zero', () => {
+  for (const rollingUpdate of [
+    { maxSurge: 0, maxUnavailable: 0 },
+    { maxSurge: '0%', maxUnavailable: 0 },
+    { maxSurge: 0, maxUnavailable: '0%' },
+    { maxSurge: '0%', maxUnavailable: '0%' },
+  ]) {
+    const result = validateDeploymentConfig(validConfig({ rollingUpdate }));
+    assert.equal(result.valid, false, JSON.stringify(rollingUpdate));
+    assert(result.errors.some((error) => error.path === '$.rollingUpdate' && error.code === 'kubernetes'));
+  }
+});
+
 test('rejects open-ended network peers and ingress without a Service', () => {
   const result = validateDeploymentConfig(
     validConfig({

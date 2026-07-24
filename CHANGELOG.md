@@ -8,7 +8,7 @@ All notable changes will be documented here.
 
 ### Added
 
-- Full quality and compatibility CI on Node.js 22, 24, and 26.
+- Full quality and compatibility CI on Node.js 22.22.2+, 24.15.0+, and 26.x.
 - Explicit Corepack installation in repository and generated CI, including Node.js distributions that do not
   bundle it.
 - A kind-based Kubernetes runtime smoke that builds, applies, rolls out, checks workload policy, and probes

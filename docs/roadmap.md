@@ -10,6 +10,7 @@
 
 ## 0.2
 
+- Align generated `monox.config.json` with the public schema and validate it in generated CI
 - Task-level dependency graph, selective execution, cache, and cache explanations
 - Safe local remote-proxy adapter with an explicit allowlist
 - Preview environment lifecycle with TTL cleanup

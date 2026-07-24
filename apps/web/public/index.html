@@ -7,7 +7,7 @@
       name="description"
       content="MonoX is an open-source JavaScript monorepo starter and delivery toolkit that generates explicit workspace, Docker, and Kubernetes contracts for developers, CI, and coding agents."
     />
-    <meta name="theme-color" content="#11151d" />
+    <meta name="theme-color" content="#07111f" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="MonoX" />
     <meta property="og:title" content="MonoX | Explicit monorepo and delivery infrastructure" />
@@ -32,6 +32,8 @@
     <meta name="twitter:image:alt" content="MonoX, explicit monorepo and delivery infrastructure" />
     <link rel="canonical" href="https://monox.dev/" />
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-64.png" type="image/png" sizes="64x64" />
+    <link rel="apple-touch-icon" href="/app-icon.png" />
     <title>MonoX | Explicit monorepo and delivery infrastructure</title>
     <link rel="stylesheet" href="/styles.css" />
     <script type="application/ld+json">
@@ -64,8 +66,13 @@
 
     <header class="site-header" aria-label="MonoX site">
       <a class="wordmark" href="/" aria-label="MonoX home">
-        <span aria-hidden="true">MX</span>
-        <strong>MonoX</strong>
+        <img
+          src="/brand/monox-lockup-horizontal-reverse.svg"
+          width="125"
+          height="40"
+          alt=""
+          aria-hidden="true"
+        />
       </a>
       <div class="header-actions">
         <p class="release-status">Available on npm</p>
@@ -96,10 +103,8 @@
           </div>
           <pre tabindex="0"><code><strong>npm create monox@latest -- my-product --yes</strong>
 <span>cd my-product</span>
-<span>corepack enable</span>
-<span>yarn install --immutable</span>
-<span>yarn doctor</span>
-<span>yarn dev --all</span></code></pre>
+<span>npx --yes corepack@0.35.0 yarn run dev:api</span>
+<span>npx --yes corepack@0.35.0 yarn run dev:web</span></code></pre>
           <p>
             The default generated workspace uses Yarn. Choose npm or pnpm with
             <code>--package-manager</code>. The reference repository uses Yarn 4, and public CI repeats the

@@ -26,7 +26,7 @@ jobs:
   runtime-smoke:
     name: Build, apply, roll out, and probe
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -71,3 +71,8 @@ jobs:
         env:
           MONOX_KIND_CLUSTER_NAME: monox-${{ github.run_id }}-${{ github.run_attempt }}
         run: scripts/kubernetes-runtime-smoke.sh
+
+      - name: Generate a project and run its Docker and Kubernetes artifacts
+        env:
+          MONOX_GENERATED_KIND_CLUSTER_NAME: monox-generated-${{ github.run_id }}-${{ github.run_attempt }}
+        run: scripts/generated-project-runtime-smoke.sh

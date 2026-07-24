@@ -1,10 +1,14 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Mosharush/MonoX/main/assets/brand/monox-readme-header.png" alt="MonoX. Reusable monorepo boundaries and delivery paths for AI agents." width="1280">
+</p>
+
 # create-monox
 
 `create-monox` generates a compact JavaScript monorepo with clear ownership boundaries for people and coding
-agents. It has no runtime dependencies and supports the Node.js 22, 24, and 26 majors.
+agents. It has no runtime dependencies and supports Node.js 22.22.2+, 24.15.0+, and 26.x.
 
-Generated Yarn and pnpm workflows install Corepack 0.35.0 explicitly, including on Node.js distributions that
-do not bundle Corepack.
+Generated commands pin Yarn 4.9.1, npm 10.9.2, or pnpm 10.13.1. Yarn and pnpm run through Corepack 0.35.0,
+including on Node.js distributions that do not bundle Corepack.
 
 The package is available as the [`create-monox` npm package](https://www.npmjs.com/package/create-monox).
 Releases use npm trusted publishing from the protected GitHub workflow and include registry provenance.
@@ -15,6 +19,8 @@ From npm:
 
 ```sh
 npm create monox@latest -- my-project --yes
+cd my-project
+npx --yes corepack@0.35.0 yarn run dev:api
 ```
 
 From a checked-out MonoX repository:
@@ -39,7 +45,8 @@ Run `create-monox --help` for the complete command reference.
 Scripts, CI jobs, and other sessions without an interactive terminal must pass `--yes` explicitly. The CLI
 installs dependencies by default so the selected package manager creates the lockfile required by generated CI
 and Docker builds. Pass `--no-install` only when another process will run the install and commit that lockfile
-before the first push. Generated CI runs its test gate on Node.js 22, 24, and 26.
+before the first push. Generated CI runs its test gate on the supported Node.js 22, 24, and 26 lines and uses
+the same pinned package-manager adapter as local generation and Docker builds.
 
 ## Generated layout
 

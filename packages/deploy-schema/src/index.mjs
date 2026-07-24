@@ -282,6 +282,10 @@ function checkIntOrPercent(errors, path, value) {
   addError(errors, path, 'must be a non-negative integer or a percentage from 0% to 100%', 'format');
 }
 
+function isZeroIntOrPercent(value) {
+  return value === 0 || value === '0%';
+}
+
 function cpuCores(value) {
   if (typeof value !== 'string' || !quantityCpuPattern.test(value)) return null;
   return value.endsWith('m') ? Number(value.slice(0, -1)) / 1000 : Number(value);
@@ -553,7 +557,10 @@ export function validateDeploymentConfig(input) {
   ) {
     checkIntOrPercent(errors, '$.rollingUpdate.maxSurge', value.rollingUpdate.maxSurge);
     checkIntOrPercent(errors, '$.rollingUpdate.maxUnavailable', value.rollingUpdate.maxUnavailable);
-    if (value.rollingUpdate.maxSurge === 0 && value.rollingUpdate.maxUnavailable === 0)
+    if (
+      isZeroIntOrPercent(value.rollingUpdate.maxSurge) &&
+      isZeroIntOrPercent(value.rollingUpdate.maxUnavailable)
+    )
       addError(errors, '$.rollingUpdate', 'maxSurge and maxUnavailable cannot both be zero', 'kubernetes');
   }
 

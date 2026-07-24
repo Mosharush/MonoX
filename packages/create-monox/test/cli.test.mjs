@@ -74,10 +74,33 @@ test('CLI generates a project into an explicit directory', async () => {
 
     assert.equal(stderr, '');
     assert.match(stdout, /Created cli-app/);
-    assert.match(stdout, /Next: .*npm install/);
+    assert.match(stdout, /Next: .*npx --yes npm@10\.9\.2 install/);
     const packageJson = JSON.parse(await readFile(join(destination, 'package.json'), 'utf8'));
     assert.equal(packageJson.name, 'cli-app');
     assert.equal(packageJson.packageManager, 'npm@10.9.2');
+  } finally {
+    await rm(parent, { recursive: true, force: true });
+  }
+});
+
+test('CLI prints a Node 26 safe Yarn bootstrap when installation is skipped', async () => {
+  const parent = await mkdtemp(join(tmpdir(), 'create-monox-cli-'));
+  const destination = join(parent, 'yarn-output');
+
+  try {
+    const { stdout, stderr } = await execFileAsync(process.execPath, [
+      cliPath,
+      'yarn-app',
+      '--directory',
+      destination,
+      '--yes',
+      '--no-git',
+      '--no-install',
+    ]);
+
+    assert.equal(stderr, '');
+    assert.match(stdout, /npx --yes corepack@0\.35\.0 yarn install/);
+    assert.doesNotMatch(stdout, /&& corepack yarn install/);
   } finally {
     await rm(parent, { recursive: true, force: true });
   }

@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/brand/monox-readme-header.svg" alt="MonoX. Reusable monorepo boundaries and delivery paths for AI agents." width="1280">
+</p>
+
 # MonoX
 
 [![create-monox on npm](https://img.shields.io/npm/v/create-monox?label=create-monox)](https://www.npmjs.com/package/create-monox)
@@ -38,11 +42,12 @@ stay visible in configuration.
 
 ## Quick start
 
-Requirements: Node.js 22, 24, or 26 and Corepack. These are the supported majors; odd-numbered releases are
-not part of the compatibility contract. Node.js distributions that do not bundle Corepack can install the
-version used in CI with `npm install --global corepack@0.35.0`.
+Requirements: Node.js 22.22.2+, 24.15.0+, or 26.x. Odd-numbered releases and Node.js 27+ are not part of the
+tested compatibility contract. Install the same Corepack version used in CI before working in this reference
+repository.
 
 ```bash
+npm install --global corepack@0.35.0
 corepack enable
 yarn install --immutable
 yarn doctor

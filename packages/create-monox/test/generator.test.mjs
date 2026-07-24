@@ -46,9 +46,16 @@ test('generates the default workspace with Docker and Kubernetes templates', asy
     assert.equal(packageJson.name, 'sample-app');
     assert.equal(packageJson.private, true);
     assert.equal(packageJson.packageManager, 'yarn@4.9.1');
-    assert.equal(packageJson.engines.node, '^22.0.0 || ^24.0.0 || ^26.0.0');
+    assert.equal(packageJson.engines.node, '>=22.22.2 <23.0.0 || >=24.15.0 <25.0.0 || >=26.0.0 <27.0.0');
     assert.deepEqual(packageJson.workspaces, ['apps/*', 'packages/*']);
     assert.equal(await readFile(join(destination, '.yarnrc.yml'), 'utf8'), 'nodeLinker: node-modules\n');
+
+    const generatedReadme = await readFile(join(destination, 'README.md'), 'utf8');
+    assert.match(generatedReadme, /npx --yes corepack@0\.35\.0 yarn install/);
+    assert.match(generatedReadme, /npx --yes corepack@0\.35\.0 yarn run dev:api/);
+    assert.match(generatedReadme, /npx --yes corepack@0\.35\.0 yarn run dev:web/);
+    assert.match(generatedReadme, /npx --yes corepack@0\.35\.0 yarn test/);
+    assert.doesNotMatch(generatedReadme, /^corepack enable$|^yarn /m);
 
     const config = JSON.parse(await readFile(join(destination, 'monox.config.json'), 'utf8'));
     assert.deepEqual(config.infrastructure, {
@@ -64,14 +71,16 @@ test('generates the default workspace with Docker and Kubernetes templates', asy
     assert.match(workflow, /node:\n\s+- 22\n\s+- 24\n\s+- 26/);
     assert.match(workflow, /node-version: \$\{\{ matrix\.node \}\}/);
     assert.match(workflow, /Require committed yarn\.lock/);
-    assert.match(workflow, /npm install --global corepack@0\.35\.0/);
-    assert.match(workflow, /yarn install --immutable/);
+    assert.match(workflow, /npx --yes corepack@0\.35\.0 yarn install --immutable/);
+    assert.match(workflow, /npx --yes corepack@0\.35\.0 yarn test/);
+    assert.doesNotMatch(workflow, /corepack enable/);
 
     const apiDockerfile = await readFile(join(destination, 'infra/docker/api.Dockerfile'), 'utf8');
     assert.match(apiDockerfile, /node:22\.23\.1-bookworm-slim@sha256:[a-f0-9]{64}/);
     assert.match(apiDockerfile, /Missing yarn\.lock/);
-    assert.match(apiDockerfile, /yarn install --immutable/);
-    assert.match(apiDockerfile, /USER node/);
+    assert.match(apiDockerfile, /npx --yes corepack@0\.35\.0 yarn install --immutable/);
+    assert.match(apiDockerfile, /USER 10001:10001/);
+    assert.doesNotMatch(apiDockerfile, /USER node/);
     assert.match(apiDockerfile, /HEALTHCHECK/);
 
     const compose = await readFile(join(destination, 'infra/docker/compose.yaml'), 'utf8');
@@ -81,6 +90,8 @@ test('generates the default workspace with Docker and Kubernetes templates', asy
     const workloads = await readFile(join(destination, 'infra/kubernetes/workloads.yaml'), 'utf8');
     assert.doesNotMatch(workloads, /:latest/);
     assert.match(workloads, /runAsNonRoot: true/);
+    assert.equal((workloads.match(/runAsUser: 10001/g) ?? []).length, 2);
+    assert.equal((workloads.match(/runAsGroup: 10001/g) ?? []).length, 2);
     assert.match(workloads, /kind: NetworkPolicy/);
     assert.match(workloads, /kind: PodDisruptionBudget/);
   });
@@ -104,8 +115,9 @@ test('supports pnpm and omits infrastructure for the none preset', async () => {
     assert.equal(apiPackage.dependencies['@minimal-app/shared'], 'workspace:*');
 
     const workflow = await readFile(join(destination, '.github/workflows/ci.yml'), 'utf8');
-    assert.match(workflow, /pnpm install --frozen-lockfile/);
-    assert.match(workflow, /corepack enable/);
+    assert.match(workflow, /npx --yes corepack@0\.35\.0 pnpm install --frozen-lockfile/);
+    assert.match(workflow, /npx --yes corepack@0\.35\.0 pnpm test/);
+    assert.doesNotMatch(workflow, /corepack enable/);
   });
 });
 
@@ -177,14 +189,27 @@ test('runs Git initialization and the selected installer only when requested', a
 
     assert.deepEqual(calls, [
       { command: 'git', args: ['init', '--initial-branch=main'], cwd: destination },
-      { command: 'npm', args: ['install'], cwd: destination },
+      { command: 'npx', args: ['--yes', 'npm@10.9.2', 'install'], cwd: destination },
     ]);
+    const generatedReadme = await readFile(join(destination, 'README.md'), 'utf8');
+    const generatedWorkflow = await readFile(join(destination, '.github/workflows/ci.yml'), 'utf8');
+    const generatedDockerfile = await readFile(join(destination, 'infra/docker/api.Dockerfile'), 'utf8');
+    assert.match(generatedReadme, /npx --yes npm@10\.9\.2 install/);
+    assert.match(generatedReadme, /npx --yes npm@10\.9\.2 run dev:api/);
+    assert.match(generatedReadme, /npx --yes npm@10\.9\.2 test/);
+    assert.match(generatedWorkflow, /npx --yes npm@10\.9\.2 ci/);
+    assert.match(generatedWorkflow, /npx --yes npm@10\.9\.2 test/);
+    assert.match(generatedDockerfile, /RUN npx --yes npm@10\.9\.2 ci/);
+    assert.doesNotMatch(
+      generatedReadme + generatedWorkflow + generatedDockerfile,
+      /(^|\s)npm (install|ci|test)/m
+    );
     assert.equal(result.gitInitialized, true);
     assert.equal(result.installed, true);
   });
 });
 
-test('uses Corepack to install with Yarn and produce the generated lockfile', async () => {
+test('bootstraps pinned Corepack through npx for a Yarn install', async () => {
   await withTemporaryDirectory(async (parent) => {
     const calls = [];
 
@@ -206,8 +231,8 @@ test('uses Corepack to install with Yarn and produce the generated lockfile', as
 
     assert.deepEqual(calls, [
       {
-        command: 'corepack',
-        args: ['yarn', 'install'],
+        command: 'npx',
+        args: ['--yes', 'corepack@0.35.0', 'yarn', 'install'],
         cwd: join(parent, 'yarn-app'),
       },
     ]);

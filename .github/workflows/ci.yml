@@ -67,6 +67,68 @@ jobs:
       - name: Validate local Compose model
         run: docker compose -f infra/local/docker-compose.yml config --quiet
 
+  node-26-consumer-smoke:
+    name: Node 26 consumer (${{ matrix.package-manager }}) without bundled Corepack
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        package-manager:
+          - yarn
+          - npm
+          - pnpm
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js 26
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 26
+
+      - name: Generate and install without a global Corepack binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          shim_directory="${RUNNER_TEMP}/no-corepack"
+          project_directory="${RUNNER_TEMP}/consumer-${{ matrix.package-manager }}"
+          mkdir -p "${shim_directory}"
+          printf '#!/usr/bin/env bash\nexit 127\n' >"${shim_directory}/corepack"
+          chmod 0755 "${shim_directory}/corepack"
+
+          if PATH="${shim_directory}:${PATH}" corepack --version; then
+            echo "The consumer smoke must not use a global Corepack binary." >&2
+            exit 1
+          fi
+
+          PATH="${shim_directory}:${PATH}" node packages/create-monox/src/cli.mjs consumer-project \
+            --directory "${project_directory}" \
+            --package-manager "${{ matrix.package-manager }}" \
+            --infra none \
+            --yes \
+            --no-git
+
+          (
+            cd "${project_directory}"
+            case "${{ matrix.package-manager }}" in
+              yarn)
+                test -f yarn.lock
+                PATH="${shim_directory}:${PATH}" npx --yes corepack@0.35.0 yarn test
+                ;;
+              npm)
+                test -f package-lock.json
+                PATH="${shim_directory}:${PATH}" npx --yes npm@10.9.2 test
+                ;;
+              pnpm)
+                test -f pnpm-lock.yaml
+                PATH="${shim_directory}:${PATH}" npx --yes corepack@0.35.0 pnpm test
+                ;;
+            esac
+          )
+
   dependency-audit:
     name: Dependency audit
     runs-on: ubuntu-latest
