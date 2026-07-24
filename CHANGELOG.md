@@ -4,6 +4,16 @@ All notable changes will be documented here.
 
 ## Unreleased
 
+## 0.1.2
+
+The 0.1.1 source tag was not published to npm because its protected release job stopped during npm client
+bootstrap. Version 0.1.2 contains the same product changes plus the release fix below.
+
+### Fixed
+
+- Run the pinned trusted-publishing npm client through `npx` so the release job never replaces the active npm
+  installation while it is executing.
+
 ## 0.1.1
 
 ### Added

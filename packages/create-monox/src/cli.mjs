@@ -11,7 +11,7 @@ import {
   resolveDestination,
 } from './generator.mjs';
 
-const VERSION = '0.1.1';
+const VERSION = '0.1.2';
 
 export function parseArguments(argv) {
   const result = {

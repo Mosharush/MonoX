@@ -1,6 +1,6 @@
 {
   "name": "create-monox",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Create a small, agent-friendly JavaScript monorepo with optional infrastructure templates.",
   "license": "MIT",
   "author": "Moshe Harush <moshe@haru.sh>",

@@ -14,6 +14,7 @@ concurrency:
 
 env:
   COREPACK_ENABLE_DOWNLOAD_PROMPT: 0
+  NPM_CLI_VERSION: 12.0.1
 
 jobs:
   publish:
@@ -100,16 +101,16 @@ jobs:
       - name: Install dependencies immutably
         run: yarn install --immutable
 
-      - name: Install the trusted-publishing npm client
-        run: npm install --global npm@12.0.1
+      - name: Verify the pinned trusted-publishing npm client
+        run: npx --yes "npm@${NPM_CLI_VERSION}" --version
 
       - name: Test package
         run: yarn workspace create-monox test
 
       - name: Inspect package contents
         working-directory: packages/create-monox
-        run: npm pack --dry-run --json --workspaces=false
+        run: npx --yes "npm@${NPM_CLI_VERSION}" pack --dry-run --json --workspaces=false
 
       - name: Publish with npm trusted publishing
         working-directory: packages/create-monox
-        run: npm publish --access public --provenance --workspaces=false
+        run: npx --yes "npm@${NPM_CLI_VERSION}" publish --access public --provenance --workspaces=false
