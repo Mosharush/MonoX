@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 256" role="img" aria-labelledby="title desc">
+  <title id="title">MonoX horizontal reverse lockup</title>
+  <desc id="desc">The reverse MonoX mark followed by the reverse MonoX wordmark.</desc>
+  <g transform="translate(24 8) scale(.94)">
+    <g fill="#4F7CFF">
+      <path d="m55 127 18-22 128 108-18 22z" />
+      <path d="m183 105 18 22L73 235l-18-22z" />
+      <path d="M182 211h46v26h-46z" />
+    </g>
+    <g fill="#F7F9FC">
+      <path d="M36 32h32v124H36z" />
+      <path d="M188 32h32v124h-32z" />
+      <path d="m36 32 20-24 84 84-20 24z" />
+      <path d="m220 32-20-24-84 84 20 24z" />
+    </g>
+    <path d="m128 153 17 17-17 17-17-17Z" fill="#FFC83D" />
+  </g>
+  <g transform="translate(284 80) scale(1.08)">
+    <path d="M0 80V8h16l26 32L68 8h16v72H66V34L42 62 18 34v46Z" fill="#F7F9FC" />
+    <path fill="#F7F9FC" fill-rule="evenodd" d="M120 28h30c10 0 16 6 16 16v20c0 10-6 16-16 16h-30c-10 0-16-6-16-16V44c0-10 6-16 16-16Zm2 12c-4 0-6 2-6 6v16c0 4 2 6 6 6h26c4 0 6-2 6-6V46c0-4-2-6-6-6Z" />
+    <path d="M184 80V28h14v8c5-6 12-8 21-8 17 0 27 10 27 28v24h-14V58c0-12-5-18-16-18-12 0-18 7-18 20v20Z" fill="#F7F9FC" />
+    <path fill="#F7F9FC" fill-rule="evenodd" d="M282 28h30c10 0 16 6 16 16v20c0 10-6 16-16 16h-30c-10 0-16-6-16-16V44c0-10 6-16 16-16Zm2 12c-4 0-6 2-6 6v16c0 4 2 6 6 6h26c4 0 6-2 6-6V46c0-4-2-6-6-6Z" />
+    <path d="M356 8h20l24 27 24-27h20l-34 36 36 36h-20l-26-28-26 28h-20l36-36Z" fill="#4F7CFF" />
+  </g>
+</svg>

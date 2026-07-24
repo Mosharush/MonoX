@@ -15,3 +15,5 @@ rules. CI validates the repository boundaries that matter to correctness and sec
 
 AI features must expose typed, allowlisted operations. The model can propose a command or deployment change,
 but a trusted program validates it and a human approves state-changing operations.
+
+See [ADR 0003](adr/0003-model-output-is-not-executable-shell.md) for the trust boundary around model output.

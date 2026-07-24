@@ -4,8 +4,9 @@ import { isAbsolute, join, resolve } from 'node:path';
 
 export const PACKAGE_MANAGERS = Object.freeze(['yarn', 'npm', 'pnpm']);
 export const INFRA_OPTIONS = Object.freeze(['none', 'docker', 'kubernetes', 'all']);
-
-const PACKAGE_MANAGER_VERSIONS = Object.freeze({
+export const COREPACK_VERSION = '0.35.0';
+export const NODE_VERSION_RANGE = '>=22.22.2 <23.0.0 || >=24.15.0 <25.0.0 || >=26.0.0 <27.0.0';
+export const PACKAGE_MANAGER_VERSIONS = Object.freeze({
   yarn: 'yarn@4.9.1',
   npm: 'npm@10.9.2',
   pnpm: 'pnpm@10.13.1',
@@ -42,10 +43,11 @@ export function resolveDestination({ cwd = process.cwd(), name, directory } = {}
   return isAbsolute(directory) ? resolve(directory) : resolve(cwd, directory);
 }
 
-export async function runCommand(command, args, { cwd } = {}) {
+export async function runCommand(command, args, { cwd, env } = {}) {
   await new Promise((resolvePromise, rejectPromise) => {
     const child = spawn(command, args, {
       cwd,
+      env: env ? { ...process.env, ...env } : undefined,
       stdio: 'inherit',
     });
 
@@ -82,7 +84,10 @@ export async function generateProject(options, dependencies = {}) {
 
   if (normalized.install) {
     const invocation = installInvocation(normalized.packageManager);
-    await execute(invocation.command, invocation.args, { cwd: destination });
+    await execute(invocation.command, invocation.args, {
+      cwd: destination,
+      ...(invocation.env ? { env: invocation.env } : {}),
+    });
   }
 
   return Object.freeze({
@@ -97,11 +102,38 @@ export async function generateProject(options, dependencies = {}) {
 }
 
 function installInvocation(packageManager) {
-  if (packageManager === 'npm') {
-    return { command: 'npm', args: ['install'] };
+  return packageManagerInvocation(packageManager, ['install']);
+}
+
+export function packageManagerInvocation(packageManager, args = []) {
+  if (!PACKAGE_MANAGERS.includes(packageManager)) {
+    throw new Error(`Package manager must be one of: ${PACKAGE_MANAGERS.join(', ')}.`);
   }
 
-  return { command: 'corepack', args: [packageManager, 'install'] };
+  if (packageManager === 'npm') {
+    return {
+      command: 'npx',
+      args: ['--yes', PACKAGE_MANAGER_VERSIONS.npm, ...args],
+    };
+  }
+
+  return {
+    command: 'npx',
+    args: ['--yes', `corepack@${COREPACK_VERSION}`, packageManager, ...args],
+    ...(packageManager === 'yarn'
+      ? {
+          env: {
+            YARN_ENABLE_HARDENED_MODE: '0',
+            YARN_ENABLE_IMMUTABLE_INSTALLS: 'false',
+          },
+        }
+      : {}),
+  };
+}
+
+export function packageManagerShellCommand(packageManager, args = []) {
+  const invocation = packageManagerInvocation(packageManager, args);
+  return [invocation.command, ...invocation.args].join(' ');
 }
 
 function normalizeOptions(options = {}) {
@@ -205,7 +237,7 @@ function rootPackage({ name, packageManager }) {
     private: true,
     type: 'module',
     packageManager: PACKAGE_MANAGER_VERSIONS[packageManager],
-    engines: { node: '>=22 <27' },
+    engines: { node: NODE_VERSION_RANGE },
     workspaces: ['apps/*', 'packages/*'],
     scripts: {
       'dev:api': 'node --watch apps/api/src/server.mjs',
@@ -405,9 +437,10 @@ function testCommandForGuide() {
 }
 
 function projectReadme({ name, packageManager, infra }) {
-  const install = `${packageManager} install`;
-  const test = `${packageManager} test`;
-  const enableCorepack = packageManager === 'npm' ? '' : 'corepack enable\n';
+  const install = packageManagerShellCommand(packageManager, ['install']);
+  const devApi = packageManagerShellCommand(packageManager, ['run', 'dev:api']);
+  const devWeb = packageManagerShellCommand(packageManager, ['run', 'dev:web']);
+  const test = packageManagerShellCommand(packageManager, ['test']);
   const lockfile = LOCKFILE_NAMES[packageManager];
 
   return `# ${name}
@@ -417,9 +450,9 @@ A small MonoX workspace with an API, a web app, shared code, CI, and ${infra ===
 ## Start
 
 \`\`\`sh
-${enableCorepack}${install}
-${packageManager} run dev:api
-${packageManager} run dev:web
+${install}
+${devApi}
+${devWeb}
 \`\`\`
 
 The API uses port \`3001\` and exposes \`GET /health\`. The web app uses port \`3000\`. Override either port with the \`PORT\` environment variable.
@@ -437,13 +470,13 @@ Read \`AGENTS.md\` before changing workspace boundaries or infrastructure.
 }
 
 function ciWorkflow({ packageManager }) {
-  const enableCorepack = packageManager === 'npm' ? '' : '      - run: corepack enable\n';
   const lockfile = LOCKFILE_NAMES[packageManager];
   const installCommand = {
-    yarn: 'yarn install --immutable',
-    npm: 'npm ci',
-    pnpm: 'pnpm install --frozen-lockfile',
+    yarn: packageManagerShellCommand('yarn', ['install', '--immutable']),
+    npm: packageManagerShellCommand('npm', ['ci']),
+    pnpm: packageManagerShellCommand('pnpm', ['install', '--frozen-lockfile']),
   }[packageManager];
+  const testCommand = packageManagerShellCommand(packageManager, ['test']);
 
   return `name: CI
 
@@ -458,38 +491,46 @@ permissions:
 
 jobs:
   test:
+    name: Test (Node \${{ matrix.node }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node:
+          - 22
+          - 24
+          - 26
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 22
-${enableCorepack}      - name: Require committed ${lockfile}
+          node-version: \${{ matrix.node }}
+      - name: Require committed ${lockfile}
         shell: bash
         run: |
           if [[ ! -f "${lockfile}" ]]; then
-            echo "Run ${packageManager} install and commit ${lockfile} before enabling CI." >&2
+            echo "Run ${packageManagerShellCommand(packageManager, ['install'])} and commit ${lockfile} before enabling CI." >&2
             exit 1
           fi
       - run: ${installCommand}
-      - run: ${packageManager} test
+      - run: ${testCommand}
 `;
 }
 
 function dockerFiles({ name, packageManager }) {
   const lockfile = LOCKFILE_NAMES[packageManager];
   const installCommand = {
-    npm: 'RUN npm ci',
-    yarn: 'RUN corepack enable && yarn install --immutable',
-    pnpm: 'RUN corepack enable && pnpm install --frozen-lockfile',
+    npm: `RUN ${packageManagerShellCommand('npm', ['ci'])}`,
+    yarn: `RUN ${packageManagerShellCommand('yarn', ['install', '--immutable'])}`,
+    pnpm: `RUN ${packageManagerShellCommand('pnpm', ['install', '--frozen-lockfile'])}`,
   }[packageManager];
 
   const base = `FROM node:22.23.1-bookworm-slim@sha256:6c74791e557ce11fc957704f6d4fe134a7bc8d6f5ca4403205b2966bd488f6b3
 WORKDIR /workspace
 COPY . .
-RUN test -f ${lockfile} || (echo "Missing ${lockfile}; run ${packageManager} install and commit it before building." >&2; exit 1)
+RUN test -f ${lockfile} || (echo "Missing ${lockfile}; run ${packageManagerShellCommand(packageManager, ['install'])} and commit it before building." >&2; exit 1)
 ${installCommand}
 ENV NODE_ENV=production
 `;
@@ -500,7 +541,7 @@ ENV NODE_ENV=production
       'infra/docker/api.Dockerfile',
       `${base}ENV PORT=3001
 EXPOSE 3001
-USER node
+USER 10001:10001
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 CMD ["node", "-e", "fetch('http://127.0.0.1:3001/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
 CMD ["node", "apps/api/src/server.mjs"]
 `,
@@ -509,7 +550,7 @@ CMD ["node", "apps/api/src/server.mjs"]
       'infra/docker/web.Dockerfile',
       `${base}ENV PORT=3000
 EXPOSE 3000
-USER node
+USER 10001:10001
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 CMD ["node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
 CMD ["node", "apps/web/src/server.mjs"]
 `,
@@ -582,6 +623,8 @@ spec:
       automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
         seccompProfile:
           type: RuntimeDefault
       containers:
@@ -684,6 +727,8 @@ spec:
       automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
         seccompProfile:
           type: RuntimeDefault
       containers:

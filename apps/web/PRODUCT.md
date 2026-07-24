@@ -21,8 +21,9 @@ generation to a bounded deployment.
 
 ## Primary action
 
-View the canonical source repository. The secondary action explains the delivery contract without presenting
-unpublished package install commands.
+Generate a project with the published `create-monox` package. The secondary action opens the canonical source
+repository, while the rest of the page explains the architecture, delivery contract, current capability
+status, and explicit non-goals.
 
 ## Voice
 

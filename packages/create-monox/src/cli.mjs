@@ -3,9 +3,15 @@
 import { realpath } from 'node:fs/promises';
 import { createInterface } from 'node:readline/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { generateProject, INFRA_OPTIONS, PACKAGE_MANAGERS, resolveDestination } from './generator.mjs';
+import {
+  generateProject,
+  INFRA_OPTIONS,
+  packageManagerShellCommand,
+  PACKAGE_MANAGERS,
+  resolveDestination,
+} from './generator.mjs';
 
-const VERSION = '0.1.0';
+const VERSION = '0.1.1';
 
 export function parseArguments(argv) {
   const result = {
@@ -199,7 +205,7 @@ function quotePath(path) {
 }
 
 function installCommand(packageManager) {
-  return packageManager === 'npm' ? 'npm install' : `corepack ${packageManager} install`;
+  return packageManagerShellCommand(packageManager, ['install']);
 }
 
 function helpText() {

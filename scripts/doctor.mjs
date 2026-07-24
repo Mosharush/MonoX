@@ -3,12 +3,11 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { findWorkspaceRoot } from '../packages/workspaces/src/index.mjs';
+import { satisfiesNodeVersionRange } from './node-version-range.mjs';
 
 const strict = process.argv.includes('--strict');
 const root = await findWorkspaceRoot();
 const manifest = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
-const requiredNode = Number(manifest.engines.node.match(/>=([0-9]+)/)?.[1] ?? 22);
-const nodeMajor = Number(process.versions.node.split('.')[0]);
 const checks = [];
 
 function commandVersion(command, args = ['--version'], required = false) {
@@ -23,7 +22,7 @@ function commandVersion(command, args = ['--version'], required = false) {
 
 checks.push({
   name: 'node',
-  ok: nodeMajor >= requiredNode,
+  ok: satisfiesNodeVersionRange(process.versions.node, manifest.engines.node),
   required: true,
   detail: `${process.versions.node} (requires ${manifest.engines.node})`,
 });

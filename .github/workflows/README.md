@@ -23,9 +23,12 @@ publishing packages or containers requires an explicit release trigger and a pro
 
 ## Workflow boundaries
 
-- `ci.yml` runs read-only quality, tests, builds, infrastructure validation, dependency review, dependency
-  audit, and secret scanning. Dependency review requires a public repository or the corresponding GitHub
-  security entitlement.
+- `ci.yml` runs the complete formatting, repository-rule, test, build, and infrastructure gate on Node.js 22,
+  24, and 26. It also runs dependency review, dependency audit, and secret scanning. Dependency review
+  requires a public repository or the corresponding GitHub security entitlement.
+- `kubernetes-smoke.yml` builds the synthetic API image, renders the runtime fixture, applies it to a
+  disposable kind cluster, waits for rollout, checks workload policy, and probes the Service. kind, kubectl,
+  and the kind node image are pinned and verified. The workflow never contacts a production cluster.
 - `container-release.yml` is manual-only, accepts an explicit SemVer tag, publishes separate API and web
   images to GHCR, refuses to replace an existing release tag, and attaches BuildKit SBOM and provenance
   attestations. GitHub build provenance is also recorded for supported repositories.
@@ -33,9 +36,10 @@ publishing packages or containers requires an explicit release trigger and a pro
   trusted publishing with OIDC and provenance. Package metadata can be release-ready in the tree while the
   protected environment and matching tag continue to block publication.
 
-`create-monox` already exists on npm under the `mosharush` maintainer account. Version 0.1.0 is an in-place
-upgrade from 0.0.5, not a new package name. The release must replace the historical repository metadata with
-`https://github.com/Mosharush/MonoX`, include the MIT license in the tarball, and use trusted publishing.
+`create-monox` exists on npm under the `mosharush` maintainer account. Version 0.1.0 was the first release
+from this public repository and upgraded the historical 0.0.5 package in place. Patch releases keep the
+`https://github.com/Mosharush/MonoX` metadata, include the MIT license in the tarball, and use trusted
+publishing with registry provenance.
 
 There is intentionally no cloud deployment workflow. Add deployment automation only after an environment,
 threat model, OIDC trust policy, and approval boundary are designed and reviewed.

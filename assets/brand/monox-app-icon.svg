@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">MonoX app icon</title>
+  <desc id="desc">The MonoX mark on an ink rounded square.</desc>
+  <rect width="1024" height="1024" fill="#07111F" />
+  <rect x="32" y="32" width="960" height="960" rx="224" fill="#0B1728" />
+  <g transform="translate(102 96) scale(3.2)">
+    <g fill="#4F7CFF">
+      <path d="m55 127 18-22 128 108-18 22z" />
+      <path d="m183 105 18 22L73 235l-18-22z" />
+      <path d="M182 211h46v26h-46z" />
+    </g>
+    <g fill="#F7F9FC">
+      <path d="M36 32h32v124H36z" />
+      <path d="M188 32h32v124h-32z" />
+      <path d="m36 32 20-24 84 84-20 24z" />
+      <path d="m220 32-20-24-84 84 20 24z" />
+    </g>
+    <path d="m128 153 17 17-17 17-17-17Z" fill="#FFC83D" />
+  </g>
+</svg>

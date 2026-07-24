@@ -23,3 +23,14 @@ The NetworkPolicy allows only the selected gateway to reach the application port
 allowlisted for DNS, HTTPS and same-namespace pods. Tighten those switches for workloads with narrower needs.
 
 Rendering does not deploy and does not contact a cluster.
+
+## Runtime smoke
+
+`runtime-smoke.deployment.json` is a separate synthetic fixture for CI. The
+`scripts/kubernetes-runtime-smoke.sh` check builds the API image, creates an isolated kind cluster, applies
+the rendered fixture, waits for rollout, verifies probes and resource policy, and probes the running Service.
+The script refuses to reuse an existing cluster name and always deletes the cluster it created.
+
+The smoke fixture proves the baseline on the kind and Kubernetes versions pinned in
+`.github/workflows/kubernetes-smoke.yml`. It does not validate Ingress controllers, KEDA, cloud load
+balancers, external secret stores, or production cluster capacity.
