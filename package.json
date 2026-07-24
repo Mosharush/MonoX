@@ -1,0 +1,42 @@
+{
+  "name": "monox",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI-ready monorepo and deployment platform with explicit architecture boundaries.",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Mosharush/MonoX.git"
+  },
+  "homepage": "https://monox.dev",
+  "bugs": {
+    "url": "https://github.com/Mosharush/MonoX/issues"
+  },
+  "engines": {
+    "node": ">=22 <27"
+  },
+  "packageManager": "yarn@4.9.1",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "infra/*"
+  ],
+  "scripts": {
+    "build": "node scripts/run-workspaces.mjs build",
+    "check": "yarn format:check && yarn lint && yarn test && yarn build && yarn infra:check",
+    "create": "node packages/create-monox/src/cli.mjs",
+    "dev": "node packages/mono-runner/src/cli.mjs",
+    "dev:all": "node packages/mono-runner/src/cli.mjs --all",
+    "doctor": "node scripts/doctor.mjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "infra:check": "node scripts/validate-infra.mjs",
+    "lint": "node scripts/validate-repository.mjs",
+    "test": "node --test",
+    "workspaces:list": "node packages/workspaces/src/cli.mjs"
+  },
+  "devDependencies": {
+    "prettier": "^3.6.2"
+  }
+}

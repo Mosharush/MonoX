@@ -1,0 +1,128 @@
+{
+  "$schema": "../../packages/deploy-schema/schema/v1/deployment.schema.json",
+  "schemaVersion": "1",
+  "name": "example-api",
+  "namespace": "example",
+  "createNamespace": true,
+  "labels": {
+    "app.kubernetes.io/part-of": "example-platform",
+    "app.kubernetes.io/component": "api"
+  },
+  "annotations": {
+    "example.invalid/owner": "platform-team"
+  },
+  "replicas": 2,
+  "revisionHistoryLimit": 3,
+  "terminationGracePeriodSeconds": 60,
+  "image": {
+    "repository": "registry.invalid/example/api",
+    "tag": "0.1.0",
+    "pullPolicy": "IfNotPresent",
+    "pullSecrets": []
+  },
+  "container": {
+    "port": 3000,
+    "env": [
+      {
+        "name": "NODE_ENV",
+        "value": "production"
+      }
+    ],
+    "envFromSecrets": [],
+    "writableTmp": true
+  },
+  "serviceAccount": {
+    "create": true,
+    "name": "example-api",
+    "annotations": {}
+  },
+  "service": {
+    "enabled": true,
+    "type": "ClusterIP",
+    "port": 80,
+    "annotations": {}
+  },
+  "ingress": {
+    "enabled": true,
+    "className": "example-gateway",
+    "host": "api.example.invalid",
+    "path": "/",
+    "pathType": "Prefix",
+    "annotations": {},
+    "tls": {
+      "enabled": false
+    }
+  },
+  "probes": {
+    "startup": {
+      "path": "/healthz",
+      "periodSeconds": 5,
+      "failureThreshold": 30
+    },
+    "readiness": {
+      "path": "/readyz",
+      "periodSeconds": 10,
+      "failureThreshold": 3
+    },
+    "liveness": {
+      "path": "/healthz",
+      "periodSeconds": 30,
+      "failureThreshold": 3
+    }
+  },
+  "resources": {
+    "requests": {
+      "cpu": "100m",
+      "memory": "128Mi"
+    },
+    "limits": {
+      "cpu": "500m",
+      "memory": "512Mi"
+    }
+  },
+  "rollingUpdate": {
+    "maxSurge": "25%",
+    "maxUnavailable": 0
+  },
+  "podDisruptionBudget": {
+    "enabled": true,
+    "minAvailable": 1
+  },
+  "topologySpread": {
+    "enabled": true,
+    "maxSkew": 1,
+    "whenUnsatisfiable": "ScheduleAnyway",
+    "topologyKeys": ["topology.kubernetes.io/zone", "kubernetes.io/hostname"]
+  },
+  "networkPolicy": {
+    "enabled": true,
+    "ingressFrom": [
+      {
+        "namespaceLabels": {
+          "kubernetes.io/metadata.name": "gateway-system"
+        },
+        "podLabels": {
+          "app.kubernetes.io/component": "gateway"
+        }
+      }
+    ],
+    "egress": {
+      "dns": true,
+      "https": true,
+      "sameNamespace": true
+    }
+  },
+  "autoscaling": {
+    "mode": "hpa",
+    "minReplicas": 2,
+    "maxReplicas": 12,
+    "cpuUtilization": 70,
+    "memoryUtilization": 75
+  },
+  "podSecurity": {
+    "runAsUser": 10001,
+    "runAsGroup": 10001,
+    "fsGroup": 10001,
+    "readOnlyRootFilesystem": true
+  }
+}

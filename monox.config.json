@@ -1,0 +1,38 @@
+{
+  "$schema": "./schemas/monox.schema.json",
+  "name": "monox",
+  "workspaceGlobs": ["apps/*", "packages/*", "infra/*"],
+  "boundaries": {
+    "apps": ["packages"],
+    "packages": ["packages"],
+    "infra": ["packages"]
+  },
+  "environments": ["local", "preview", "production"],
+  "deployment": {
+    "namespace": "monox",
+    "registry": "ghcr.io/mosharush",
+    "imagePullPolicy": "IfNotPresent",
+    "autoscaling": {
+      "mode": "hpa",
+      "minReplicas": 1,
+      "maxReplicas": 20,
+      "cpuTarget": 70
+    }
+  },
+  "applications": [
+    {
+      "name": "api",
+      "workspace": "@monox/api",
+      "port": 3000,
+      "healthPath": "/healthz",
+      "public": true
+    },
+    {
+      "name": "web",
+      "workspace": "@monox/web",
+      "port": 3001,
+      "healthPath": "/healthz",
+      "public": true
+    }
+  ]
+}

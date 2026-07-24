@@ -1,0 +1,20 @@
+{
+  "name": "@monox/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "monox": {
+    "kind": "service",
+    "runtime": "node",
+    "port": 3000,
+    "healthPath": "/healthz"
+  },
+  "scripts": {
+    "build": "node ../../scripts/build-workspace.mjs",
+    "dev": "node --watch src/server.mjs",
+    "start": "node src/server.mjs"
+  },
+  "dependencies": {
+    "@monox/shared": "workspace:^"
+  }
+}

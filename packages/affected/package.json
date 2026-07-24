@@ -1,0 +1,16 @@
+{
+  "name": "@monox/affected",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "monox-affected": "./src/cli.mjs"
+  },
+  "exports": "./src/index.mjs",
+  "scripts": {
+    "build": "node ../../scripts/build-workspace.mjs"
+  },
+  "dependencies": {
+    "@monox/workspaces": "workspace:^"
+  }
+}

@@ -1,0 +1,6 @@
+.yarn
+coverage
+dist
+node_modules
+yarn.lock
+packages/create-monox/templates

@@ -1,0 +1,25 @@
+{
+  "name": "@monox/kube-renderer",
+  "version": "0.1.0",
+  "description": "Dependency-light Kubernetes manifest renderer for the MonoX deployment contract.",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "monox-kube": "./src/cli.mjs"
+  },
+  "exports": "./src/index.mjs",
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node ../../scripts/build-workspace.mjs",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@monox/deploy-schema": "workspace:^"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

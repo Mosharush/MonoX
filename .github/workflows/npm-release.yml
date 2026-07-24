@@ -1,0 +1,112 @@
+name: Publish create-monox
+
+on:
+  push:
+    tags:
+      - create-monox-v*
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-create-monox-${{ github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  COREPACK_ENABLE_DOWNLOAD_PROMPT: 0
+
+jobs:
+  publish:
+    name: Publish create-monox to npm
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node.js and npm registry
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+
+      - name: Validate package and release tag
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          package_name="$(node --input-type=module -e "import data from './packages/create-monox/package.json' with { type: 'json' }; process.stdout.write(data.name)")"
+          package_version="$(node --input-type=module -e "import data from './packages/create-monox/package.json' with { type: 'json' }; process.stdout.write(data.version)")"
+          package_private="$(node --input-type=module -e "import data from './packages/create-monox/package.json' with { type: 'json' }; process.stdout.write(String(data.private === true))")"
+          package_license="$(node --input-type=module -e "import data from './packages/create-monox/package.json' with { type: 'json' }; process.stdout.write(data.license ?? '')")"
+          package_repository="$(node --input-type=module -e "import data from './packages/create-monox/package.json' with { type: 'json' }; const repository = typeof data.repository === 'string' ? data.repository : data.repository?.url ?? ''; process.stdout.write(repository)")"
+          expected_tag="create-monox-v${package_version}"
+          expected_repository="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}"
+          source_sha="$(git rev-parse HEAD)"
+          main_sha="$(git rev-parse refs/remotes/origin/main)"
+
+          if [[ "${package_name}" != "create-monox" ]]; then
+            echo "Expected the package name create-monox." >&2
+            exit 1
+          fi
+
+          if [[ "${package_private}" == "true" ]]; then
+            echo "create-monox must be reviewed and marked publishable before release." >&2
+            exit 1
+          fi
+
+          if [[ "${package_license}" != "MIT" || ! -f packages/create-monox/LICENSE ]]; then
+            echo "create-monox must declare MIT and include its LICENSE file." >&2
+            exit 1
+          fi
+
+          case "${package_repository}" in
+            "${expected_repository}"|"${expected_repository}.git"|"git+${expected_repository}.git") ;;
+            *)
+              echo "Package repository must match ${expected_repository} for npm provenance." >&2
+              exit 1
+              ;;
+          esac
+
+          if [[ "${GITHUB_REF_TYPE}" != "tag" || "${GITHUB_REF_NAME}" != "${expected_tag}" ]]; then
+            echo "Release tag must exactly match ${expected_tag}." >&2
+            exit 1
+          fi
+
+          if [[ "${source_sha}" != "${main_sha}" ]]; then
+            echo "Release tag must point to the current main commit." >&2
+            exit 1
+          fi
+
+          if [[ ! "${package_version}" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z][0-9A-Za-z.-]*)?$ ]]; then
+            echo "Package version is not an accepted SemVer release version." >&2
+            exit 1
+          fi
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies immutably
+        run: yarn install --immutable
+
+      - name: Install the trusted-publishing npm client
+        run: npm install --global npm@12.0.1
+
+      - name: Test package
+        run: yarn workspace create-monox test
+
+      - name: Inspect package contents
+        working-directory: packages/create-monox
+        run: npm pack --dry-run --json --workspaces=false
+
+      - name: Publish with npm trusted publishing
+        working-directory: packages/create-monox
+        run: npm publish --access public --provenance --workspaces=false

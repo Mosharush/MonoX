@@ -1,0 +1,108 @@
+name: monox-local
+
+services:
+  postgres:
+    profiles: [local]
+    image: postgres:17.5-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-monox}
+      POSTGRES_USER: ${POSTGRES_USER:-monox}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-development-only}
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    profiles: [local]
+    image: redis:8.0.3-alpine
+    command: [redis-server, --appendonly, 'yes', --save, '60', '1']
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  ollama:
+    profiles: [local]
+    image: ollama/ollama:0.9.6
+    ports:
+      - '${OLLAMA_PORT:-11434}:11434'
+    volumes:
+      - ollama-data:/root/.ollama
+    healthcheck:
+      test: [CMD, ollama, list]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+  api:
+    profiles: [local]
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.node
+      args:
+        MONOX_WORKSPACE: '@monox/api'
+    environment:
+      MONOX_WORKSPACE: '@monox/api'
+      MONOX_ENV: local
+      PORT: 3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-monox}:${POSTGRES_PASSWORD:-local-development-only}@postgres:5432/${POSTGRES_DB:-monox}
+      REDIS_URL: redis://redis:6379
+      OLLAMA_URL: http://ollama:11434
+    ports:
+      - '${API_PORT:-3000}:3000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+
+  web:
+    profiles: [local]
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.node
+      args:
+        MONOX_WORKSPACE: '@monox/web'
+    environment:
+      MONOX_WORKSPACE: '@monox/web'
+      PORT: 3001
+    ports:
+      - '${WEB_PORT:-3001}:3001'
+    depends_on:
+      api:
+        condition: service_healthy
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  redis-data:
+  ollama-data:

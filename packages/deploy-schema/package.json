@@ -1,0 +1,23 @@
+{
+  "name": "@monox/deploy-schema",
+  "version": "0.1.0",
+  "description": "Versioned, dependency-free deployment contract for MonoX applications.",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.mjs",
+    "./schema/v1": "./schema/v1/deployment.schema.json"
+  },
+  "files": [
+    "schema",
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node ../../scripts/build-workspace.mjs",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

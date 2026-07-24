@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="MonoX gives developers and coding agents explicit monorepo and deployment contracts."
+    />
+    <meta name="theme-color" content="#11151d" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="MonoX" />
+    <meta property="og:title" content="MonoX | Explicit delivery infrastructure" />
+    <meta
+      property="og:description"
+      content="An AI-ready monorepo and deployment platform with explicit architecture boundaries."
+    />
+    <meta property="og:url" content="https://monox.dev/" />
+    <meta name="twitter:card" content="summary" />
+    <link rel="canonical" href="https://monox.dev/" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <title>MonoX | Explicit delivery infrastructure</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+
+    <header class="site-header" aria-label="MonoX starter">
+      <a class="wordmark" href="/" aria-label="MonoX home">
+        <span aria-hidden="true">MX</span>
+        <strong>MonoX</strong>
+      </a>
+      <p class="release-status">0.1.0 in final review</p>
+    </header>
+
+    <main id="main-content">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="context">Monorepo and deployment platform</p>
+          <h1 id="hero-title">One repo.<br />Explicit boundaries.<br />Repeatable delivery.</h1>
+          <p class="lede" dir="auto">
+            MonoX gives developers and coding agents the same contracts for workspaces, validation,
+            containers, and Kubernetes. Move quickly without hiding ownership, limits, or failure modes.
+          </p>
+          <div class="actions">
+            <a class="primary-action" href="#delivery-contract">Inspect the delivery contract</a>
+            <a class="text-action" href="#release-gate">Check release status</a>
+          </div>
+        </div>
+
+        <aside class="command-panel" id="quick-start" aria-label="MonoX quick start">
+          <div class="panel-heading">
+            <span>Verification gate</span>
+            <span>Node 22 to 26</span>
+          </div>
+          <pre tabindex="0"><code><span>corepack enable</span>
+<span>yarn install --immutable</span>
+<span>yarn doctor</span>
+<strong>yarn dev --all</strong></code></pre>
+          <p>These are the candidate checks. Install instructions follow the public source release.</p>
+        </aside>
+      </section>
+
+      <section class="contract" id="delivery-contract" aria-labelledby="contract-title">
+        <div class="section-intro">
+          <p class="context">Delivery contract</p>
+          <h2 id="contract-title">A visible path from prompt to workload</h2>
+          <p dir="auto">
+            Every stage has an input, an owner, and a gate. Autoscaling stops at the ceiling you configure.
+          </p>
+        </div>
+
+        <ol class="delivery-flow">
+          <li>
+            <span class="step-number">01</span>
+            <div>
+              <h3>Generate</h3>
+              <p>Start with synthetic apps, workspace metadata, and infrastructure adapters.</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-number">02</span>
+            <div>
+              <h3>Work in bounds</h3>
+              <p>Apps consume packages. Infrastructure stays independent from product source.</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-number">03</span>
+            <div>
+              <h3>Verify</h3>
+              <p>Run affected tests, repository rules, builds, and deployment validation.</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-number">04</span>
+            <div>
+              <h3>Deploy within limits</h3>
+              <p>Use probes, budgets, policies, and a bounded autoscaling maximum.</p>
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      <section class="release-gate" id="release-gate" aria-labelledby="release-title">
+        <p class="context">Release status</p>
+        <div class="release-layout">
+          <h2 id="release-title">0.1.0 is in final review.</h2>
+          <div class="release-copy">
+            <p>
+              Security, provenance, and repository controls are the remaining gates. Source access and package
+              install instructions will appear here only after the canonical repository passes public CI.
+            </p>
+            <p class="release-next">Next gate: green CI on the public source commit.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <p>© 2026 Moshe Harush. MIT licensed.</p>
+      <p>Public source follows the release gates.</p>
+    </footer>
+  </body>
+</html>

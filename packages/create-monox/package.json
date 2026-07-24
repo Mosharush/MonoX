@@ -1,0 +1,45 @@
+{
+  "name": "create-monox",
+  "version": "0.1.0",
+  "description": "Create a small, agent-friendly JavaScript monorepo with optional infrastructure templates.",
+  "private": false,
+  "license": "MIT",
+  "author": "Moshe Harush <moshe@haru.sh>",
+  "keywords": [
+    "ai-agents",
+    "developer-tools",
+    "devops",
+    "monorepo",
+    "scaffolding"
+  ],
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Mosharush/MonoX.git",
+    "directory": "packages/create-monox"
+  },
+  "homepage": "https://monox.dev",
+  "bugs": {
+    "url": "https://github.com/Mosharush/MonoX/issues"
+  },
+  "bin": {
+    "create-monox": "src/cli.mjs"
+  },
+  "exports": {
+    ".": "./src/generator.mjs"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=22 <27"
+  }
+}

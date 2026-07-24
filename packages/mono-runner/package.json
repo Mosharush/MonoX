@@ -1,0 +1,16 @@
+{
+  "name": "@monox/mono-runner",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "monox-dev": "./src/cli.mjs"
+  },
+  "exports": "./src/index.mjs",
+  "scripts": {
+    "build": "node ../../scripts/build-workspace.mjs"
+  },
+  "dependencies": {
+    "@monox/workspaces": "workspace:^"
+  }
+}

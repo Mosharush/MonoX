@@ -1,0 +1,48 @@
+# syntax=docker/dockerfile:1.7
+
+FROM node:22.23.1-bookworm-slim@sha256:6c74791e557ce11fc957704f6d4fe134a7bc8d6f5ca4403205b2966bd488f6b3 AS build
+
+WORKDIR /workspace
+ENV CI=true \
+    COREPACK_HOME=/opt/corepack \
+    HUSKY=0
+
+RUN corepack enable
+
+COPY . .
+
+ARG MONOX_WORKSPACE=@monox/api
+RUN case "${MONOX_WORKSPACE}" in @*/*) ;; *) echo "MONOX_WORKSPACE must be a scoped workspace name" >&2; exit 64 ;; esac
+RUN test -f yarn.lock && yarn install --immutable
+RUN yarn workspace "${MONOX_WORKSPACE}" build
+RUN yarn workspaces focus "${MONOX_WORKSPACE}" --production
+
+FROM node:22.23.1-bookworm-slim@sha256:6c74791e557ce11fc957704f6d4fe134a7bc8d6f5ca4403205b2966bd488f6b3 AS runtime
+
+ARG MONOX_WORKSPACE=@monox/api
+
+ENV NODE_ENV=production \
+    COREPACK_HOME=/opt/corepack \
+    HOME=/tmp \
+    HOST=0.0.0.0 \
+    PORT=3000 \
+    HEALTH_PATH=/healthz \
+    MONOX_WORKSPACE=${MONOX_WORKSPACE} \
+    MONOX_START_SCRIPT=start
+
+WORKDIR /workspace
+RUN corepack enable
+
+COPY --from=build --chown=10001:10001 /workspace /workspace
+COPY --from=build --chown=10001:10001 /opt/corepack /opt/corepack
+COPY infra/docker/entrypoint.sh /usr/local/bin/monox-entrypoint
+RUN chmod 0555 /usr/local/bin/monox-entrypoint
+
+USER 10001:10001
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=20s --retries=3 \
+  CMD ["node", "-e", "const port=process.env.PORT||'3000';const path=process.env.HEALTH_PATH||'/healthz';fetch(`http://127.0.0.1:${port}${path}`).then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+
+ENTRYPOINT ["/usr/local/bin/monox-entrypoint"]

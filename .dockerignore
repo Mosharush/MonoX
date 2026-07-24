@@ -1,0 +1,8 @@
+.git
+.github
+.yarn/cache
+coverage
+docs
+node_modules
+*.log
+.env*
