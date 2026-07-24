@@ -182,7 +182,12 @@ test('runs Git initialization and the selected installer only when requested', a
       },
       {
         runCommand: async (command, args, context) => {
-          calls.push({ command, args, cwd: context.cwd });
+          calls.push({
+            command,
+            args,
+            cwd: context.cwd,
+            ...(context.env ? { env: context.env } : {}),
+          });
         },
       }
     );
@@ -224,7 +229,12 @@ test('bootstraps pinned Corepack through npx for a Yarn install', async () => {
       },
       {
         runCommand: async (command, args, context) => {
-          calls.push({ command, args, cwd: context.cwd });
+          calls.push({
+            command,
+            args,
+            cwd: context.cwd,
+            ...(context.env ? { env: context.env } : {}),
+          });
         },
       }
     );
@@ -234,6 +244,10 @@ test('bootstraps pinned Corepack through npx for a Yarn install', async () => {
         command: 'npx',
         args: ['--yes', 'corepack@0.35.0', 'yarn', 'install'],
         cwd: join(parent, 'yarn-app'),
+        env: {
+          YARN_ENABLE_HARDENED_MODE: '0',
+          YARN_ENABLE_IMMUTABLE_INSTALLS: 'false',
+        },
       },
     ]);
     assert.equal(result.installed, true);

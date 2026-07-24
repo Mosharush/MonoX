@@ -43,10 +43,11 @@ export function resolveDestination({ cwd = process.cwd(), name, directory } = {}
   return isAbsolute(directory) ? resolve(directory) : resolve(cwd, directory);
 }
 
-export async function runCommand(command, args, { cwd } = {}) {
+export async function runCommand(command, args, { cwd, env } = {}) {
   await new Promise((resolvePromise, rejectPromise) => {
     const child = spawn(command, args, {
       cwd,
+      env: env ? { ...process.env, ...env } : undefined,
       stdio: 'inherit',
     });
 
@@ -83,7 +84,10 @@ export async function generateProject(options, dependencies = {}) {
 
   if (normalized.install) {
     const invocation = installInvocation(normalized.packageManager);
-    await execute(invocation.command, invocation.args, { cwd: destination });
+    await execute(invocation.command, invocation.args, {
+      cwd: destination,
+      ...(invocation.env ? { env: invocation.env } : {}),
+    });
   }
 
   return Object.freeze({
@@ -116,6 +120,14 @@ export function packageManagerInvocation(packageManager, args = []) {
   return {
     command: 'npx',
     args: ['--yes', `corepack@${COREPACK_VERSION}`, packageManager, ...args],
+    ...(packageManager === 'yarn'
+      ? {
+          env: {
+            YARN_ENABLE_HARDENED_MODE: '0',
+            YARN_ENABLE_IMMUTABLE_INSTALLS: 'false',
+          },
+        }
+      : {}),
   };
 }
 
