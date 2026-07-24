@@ -4,14 +4,15 @@ All notable changes will be documented here.
 
 ## Unreleased
 
-- Complete the public repository and trusted publishing gates.
+- Complete the trusted publishing gate.
 - Publish `create-monox` 0.1.0 as an upgrade to the existing npm package.
 
-## 0.1.0 (release candidate)
+## 0.1.0 (public preview)
 
 ### Added
 
-- Clean-room MonoX platform with workspace discovery, affected-project calculation, and a development runner.
+- Public MonoX implementation with workspace discovery, affected-project calculation, and a development
+  runner.
 - Dependency-free `create-monox` CLI for Yarn, npm, and pnpm projects.
 - Synthetic API and web examples with health endpoints and tests.
 - Versioned deployment contracts and hardened Kubernetes rendering.

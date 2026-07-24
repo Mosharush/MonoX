@@ -21,8 +21,8 @@ generation to a bounded deployment.
 
 ## Primary action
 
-Inspect the delivery contract. The secondary action shows the exact release status without linking to private
-source or presenting unpublished install commands.
+View the canonical source repository. The secondary action explains the delivery contract without presenting
+unpublished package install commands.
 
 ## Voice
 

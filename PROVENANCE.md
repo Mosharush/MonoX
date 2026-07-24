@@ -1,6 +1,8 @@
 # Provenance
 
-MonoX `0.1.0` is a clean-room implementation created in 2026 from a written platform specification.
+MonoX began as a reusable monorepo and delivery foundation created and led by Moshe Harush. The public 0.1.0
+implementation was rebuilt in a new repository in 2026 from an explicit platform specification. No private
+product Git history was imported.
 
 The implementation does not copy private product source or Git history. It does not include customer data,
 production domains, cloud account identifiers, private stack configuration, credentials, operational backups

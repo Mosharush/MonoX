@@ -1,20 +1,22 @@
 # MonoX
 
-[![Release: 0.1.0 candidate](https://img.shields.io/badge/release-0.1.0%20candidate-d6a72f)](CHANGELOG.md)
+[![Release: 0.1.0 public preview](https://img.shields.io/badge/release-0.1.0%20public%20preview-d6a72f)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-6f8cff)](LICENSE)
 [![Node.js: 22 to 26](https://img.shields.io/badge/node-22%20to%2026-5fa04e)](package.json)
 
-MonoX is an AI-ready monorepo and deployment platform for teams that want fast delivery without losing
-architectural control.
+MonoX is an agent-ready JavaScript monorepo starter and deployment toolkit for teams that want fast delivery
+without losing architectural control.
 
 It gives people and coding agents the same explicit map: where code belongs, which dependencies are allowed,
 how services run locally, and how workloads are packaged for container platforms.
 
-> Status: `0.1.0` release candidate. Source remains private until its security, provenance, and public CI
-> gates are approved.
+MonoX composes existing workspace, container, and Kubernetes tools instead of replacing them.
 
-[Project site](https://monox.dev) | [Architecture](docs/architecture.md) |
-[create-monox](packages/create-monox/README.md) | [Roadmap](docs/roadmap.md)
+> Status: Public preview. Publishing `create-monox` 0.1.0 is the remaining release gate.
+
+[Project site](https://monox.dev) | [Source](https://github.com/Mosharush/MonoX) |
+[Architecture](docs/architecture.md) | [create-monox](packages/create-monox/README.md) |
+[Roadmap](docs/roadmap.md)
 
 ## What works today
 
@@ -111,11 +113,12 @@ yarn check
 It covers formatting, repository boundaries, tests, builds, Kubernetes rendering and Compose validation. CI
 adds secret scanning and dependency review.
 
-## Clean-room boundary
+## Public-source boundary
 
-This repository is a new implementation based on public platform requirements and operating lessons. It does
-not contain private product history, business services, customer fixtures, production identifiers or copied
-deployment configuration. See [Provenance](PROVENANCE.md).
+MonoX began as a reusable monorepo and delivery foundation created and led by Moshe Harush. This public 0.1.0
+implementation was rebuilt in a new repository from an explicit platform specification. It does not contain
+private product history, business services, customer fixtures, production identifiers or copied deployment
+configuration. See [Provenance](PROVENANCE.md).
 
 ## Contributing and security
 

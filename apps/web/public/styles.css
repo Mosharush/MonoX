@@ -103,6 +103,12 @@ footer {
   letter-spacing: -0.02em;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
 .release-status {
   display: flex;
   align-items: center;
@@ -120,6 +126,13 @@ footer {
   border-radius: 50%;
   background: var(--signal);
   box-shadow: 0 0 0 0.25rem oklch(0.82 0.15 85 / 0.12);
+}
+
+.header-source {
+  color: var(--primary-strong);
+  font-size: 0.83rem;
+  font-weight: 720;
+  text-underline-offset: 0.25em;
 }
 
 .hero {
@@ -425,6 +438,11 @@ footer p {
     flex-direction: column;
     justify-content: center;
     padding-block: 1rem;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
   }
 
   h1 {

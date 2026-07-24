@@ -73,7 +73,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "create-monox@workspace:packages/create-monox"
   bin:
-    create-monox: ./src/cli.mjs
+    create-monox: src/cli.mjs
   languageName: unknown
   linkType: soft
 

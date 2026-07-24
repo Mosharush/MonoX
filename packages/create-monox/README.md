@@ -3,9 +3,9 @@
 `create-monox` generates a compact JavaScript monorepo with clear ownership boundaries for people and coding
 agents. It has no runtime dependencies and supports Node.js 22 through 26.
 
-> Release status: this tree prepares `create-monox` 0.1.0 as an in-place upgrade to the existing
-> [npm package](https://www.npmjs.com/package/create-monox). The registry still serves 0.0.5 until the public
-> repository, trusted publisher, and release workflow pass their final gates.
+> Release status: public preview. This tree prepares `create-monox` 0.1.0 as an in-place upgrade to the
+> existing [npm package](https://www.npmjs.com/package/create-monox). The registry still serves 0.0.5 until
+> trusted publishing and the release workflow pass their final gates.
 
 ## Usage
 

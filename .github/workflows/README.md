@@ -1,37 +1,31 @@
 # GitHub automation
 
-Actions must remain disabled until the clean-room candidate repository exists, the complete source and
-provenance review is approved, and the activation checklist below is complete. Merely pushing these files is
-not approval to run or publish anything.
+GitHub Actions enforce the public-source quality and release boundaries. Pushing source runs read-only CI;
+publishing packages or containers requires an explicit release trigger and a protected environment.
 
-## Activation checklist
+## Repository controls
 
-1. Create the candidate as a new repository with no imported Git history.
-2. Review every tracked file for original or compatible provenance, credentials, private data, customer
-   material, private domains, and environment-specific infrastructure. Reviewers with a confidential marker
-   list can run `MONOX_PRIVATE_MARKERS='marker-one,marker-two' yarn lint` locally. Never commit or print that
-   list.
-3. Generate and review `yarn.lock`, then pass `yarn install --immutable`, `yarn format:check`, `yarn lint`,
-   `yarn test`, `yarn build`, and `yarn infra:check` locally.
-4. Pass a full-history secret scan and review the dependency audit before making the repository public.
-5. Set the repository's default workflow token permission to read-only and keep "Allow GitHub Actions to
-   create and approve pull requests" disabled.
-6. Enable the dependency graph, Dependabot alerts and security updates, secret scanning, push protection,
+1. Keep the default workflow token read-only and keep "Allow GitHub Actions to create and approve pull
+   requests" disabled.
+2. Require `yarn install --immutable`, formatting, repository rules, tests, builds, infrastructure validation,
+   dependency audit, and full-history secret scanning before a release.
+3. Enable the dependency graph, Dependabot alerts and security updates, secret scanning, push protection,
    private vulnerability reporting, and a protected `main` ruleset.
-7. Create a protected `container-release` environment with required maintainer review.
-8. Confirm `packages/create-monox/package.json` names this exact public repository, then configure npm trusted
-   publishing for the `create-monox` package, this repository, `npm-release.yml`, the protected `npm`
-   environment, and the `npm publish` action. Do not add a long-lived npm token.
-9. Confirm GHCR package visibility, immutable-tag expectations, retention, and maintainer access before the
+4. Keep external actions pinned to reviewed full commit SHAs.
+5. Protect the `container-release` and `npm` environments before using their workflows.
+6. Configure npm trusted publishing for the `create-monox` package, `Mosharush/MonoX`, `npm-release.yml`, and
+   the `npm` environment. Do not add a long-lived npm token.
+7. Confirm GHCR package visibility, immutable-tag expectations, retention, and maintainer access before the
    first container release.
-10. Enable Actions only after the candidate is public-ready and a maintainer approves this exact workflow set.
-    Run CI manually first; do not start with a release workflow.
+8. Review every tracked file for provenance, credentials, private data, customer material, private domains,
+   and environment-specific infrastructure. Reviewers with a confidential marker list can run
+   `MONOX_PRIVATE_MARKERS='marker-one,marker-two' yarn lint` locally. Never commit or print that list.
 
 ## Workflow boundaries
 
 - `ci.yml` runs read-only quality, tests, builds, infrastructure validation, dependency review, dependency
-  audit, and secret scanning. The dependency review job is intended for the public candidate or a private
-  repository with the required GitHub security entitlement.
+  audit, and secret scanning. Dependency review requires a public repository or the corresponding GitHub
+  security entitlement.
 - `container-release.yml` is manual-only, accepts an explicit SemVer tag, publishes separate API and web
   images to GHCR, refuses to replace an existing release tag, and attaches BuildKit SBOM and provenance
   attestations. GitHub build provenance is also recorded for supported repositories.

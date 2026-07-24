@@ -2,7 +2,7 @@
   "name": "monox",
   "version": "0.1.0",
   "private": true,
-  "description": "AI-ready monorepo and deployment platform with explicit architecture boundaries.",
+  "description": "Agent-ready JavaScript monorepo starter and deployment toolkit with explicit architecture boundaries.",
   "license": "MIT",
   "type": "module",
   "repository": {

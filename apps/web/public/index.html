@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="MonoX gives developers and coding agents explicit monorepo and deployment contracts."
+      content="An agent-ready JavaScript monorepo starter and deployment toolkit with explicit boundaries."
     />
     <meta name="theme-color" content="#11151d" />
     <meta property="og:type" content="website" />
@@ -13,7 +13,7 @@
     <meta property="og:title" content="MonoX | Explicit delivery infrastructure" />
     <meta
       property="og:description"
-      content="An AI-ready monorepo and deployment platform with explicit architecture boundaries."
+      content="An agent-ready JavaScript monorepo starter and deployment toolkit with explicit architecture boundaries."
     />
     <meta property="og:url" content="https://monox.dev/" />
     <meta name="twitter:card" content="summary" />
@@ -30,21 +30,24 @@
         <span aria-hidden="true">MX</span>
         <strong>MonoX</strong>
       </a>
-      <p class="release-status">0.1.0 in final review</p>
+      <div class="header-actions">
+        <p class="release-status">Public preview</p>
+        <a class="header-source" href="https://github.com/Mosharush/MonoX">GitHub</a>
+      </div>
     </header>
 
     <main id="main-content">
       <section class="hero" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <p class="context">Monorepo and deployment platform</p>
+          <p class="context">JavaScript monorepo and deployment toolkit</p>
           <h1 id="hero-title">One repo.<br />Explicit boundaries.<br />Repeatable delivery.</h1>
           <p class="lede" dir="auto">
             MonoX gives developers and coding agents the same contracts for workspaces, validation,
             containers, and Kubernetes. Move quickly without hiding ownership, limits, or failure modes.
           </p>
           <div class="actions">
-            <a class="primary-action" href="#delivery-contract">Inspect the delivery contract</a>
-            <a class="text-action" href="#release-gate">Check release status</a>
+            <a class="primary-action" href="https://github.com/Mosharush/MonoX">View source on GitHub</a>
+            <a class="text-action" href="#delivery-contract">Inspect the delivery contract</a>
           </div>
         </div>
 
@@ -57,14 +60,14 @@
 <span>yarn install --immutable</span>
 <span>yarn doctor</span>
 <strong>yarn dev --all</strong></code></pre>
-          <p>These are the candidate checks. Install instructions follow the public source release.</p>
+          <p>Run these checks from the public repository. Package publishing is the final 0.1.0 gate.</p>
         </aside>
       </section>
 
       <section class="contract" id="delivery-contract" aria-labelledby="contract-title">
         <div class="section-intro">
           <p class="context">Delivery contract</p>
-          <h2 id="contract-title">A visible path from prompt to workload</h2>
+          <h2 id="contract-title">A visible path from scaffold to deployment artifact</h2>
           <p dir="auto">
             Every stage has an input, an owner, and a gate. Autoscaling stops at the ceiling you configure.
           </p>
@@ -89,14 +92,19 @@
             <span class="step-number">03</span>
             <div>
               <h3>Verify</h3>
-              <p>Run affected tests, repository rules, builds, and deployment validation.</p>
+              <p>
+                Calculate affected workspaces, then run repository rules, tests, builds, and deployment
+                validation.
+              </p>
             </div>
           </li>
           <li>
             <span class="step-number">04</span>
             <div>
-              <h3>Deploy within limits</h3>
-              <p>Use probes, budgets, policies, and a bounded autoscaling maximum.</p>
+              <h3>Render with limits</h3>
+              <p>
+                Generate workload manifests with probes, budgets, policies, and a bounded autoscaling maximum.
+              </p>
             </div>
           </li>
         </ol>
@@ -105,13 +113,13 @@
       <section class="release-gate" id="release-gate" aria-labelledby="release-title">
         <p class="context">Release status</p>
         <div class="release-layout">
-          <h2 id="release-title">0.1.0 is in final review.</h2>
+          <h2 id="release-title">0.1.0 is in public preview.</h2>
           <div class="release-copy">
             <p>
-              Security, provenance, and repository controls are the remaining gates. Source access and package
-              install instructions will appear here only after the canonical repository passes public CI.
+              The source is public and validated in CI. Publishing <code>create-monox</code> 0.1.0 through npm
+              trusted publishing is the remaining release gate.
             </p>
-            <p class="release-next">Next gate: green CI on the public source commit.</p>
+            <p class="release-next">Next gate: npm trusted publishing and a registry smoke test.</p>
           </div>
         </div>
       </section>
@@ -119,7 +127,7 @@
 
     <footer>
       <p>© 2026 Moshe Harush. MIT licensed.</p>
-      <p>Public source follows the release gates.</p>
+      <p><a href="https://github.com/Mosharush/MonoX">Source on GitHub</a>.</p>
     </footer>
   </body>
 </html>

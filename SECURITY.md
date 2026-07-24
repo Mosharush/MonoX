@@ -15,7 +15,8 @@ Do not include production credentials, customer data or unrelated private source
 ## Security model
 
 - Generated projects contain no credentials.
-- AI output is never executed as shell code.
+- The repository contract forbids treating model output as executable shell. Current tools use typed CLI
+  arguments and pass subprocess arguments as arrays.
 - Deployment defaults to render and validate, not apply.
 - CI uses read-only permissions unless a release job needs a narrow write permission.
 - Autoscaling stays bounded by explicit configuration.

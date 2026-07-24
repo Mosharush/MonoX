@@ -13,9 +13,9 @@ test('serves the starter page and health endpoint', async () => {
     assert.match(page.headers.get('content-security-policy'), /script-src 'none'/);
     const html = await page.text();
     assert.match(html, /Explicit boundaries/);
-    assert.match(html, /0\.1\.0 is in final review/);
-    assert.match(html, /href="#release-gate"/);
-    assert.doesNotMatch(html, /github\.com\/Mosharush\/MonoX/);
+    assert.match(html, /0\.1\.0 is in public preview/);
+    assert.match(html, /href="#delivery-contract"/);
+    assert.match(html, /github\.com\/Mosharush\/MonoX/);
     assert.match(html, /https:\/\/monox\.dev\//);
 
     const icon = await fetch(`${baseUrl}/icon.svg`);
