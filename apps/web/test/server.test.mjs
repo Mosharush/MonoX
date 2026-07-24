@@ -21,6 +21,7 @@ test('serves the starter page and health endpoint', async () => {
     assert.match(html, /What MonoX is not/);
     assert.match(html, /SoftwareSourceCode/);
     assert.match(html, /href="#quick-start"/);
+    assert.match(html, /https:\/\/monox\.dev\/og-image\.png/);
     assert.match(html, /github\.com\/Mosharush\/MonoX/);
     assert.match(html, /https:\/\/monox\.dev\//);
     assert.doesNotMatch(html, /remaining release gate/i);
