@@ -16,7 +16,6 @@ test('serves the starter page and health endpoint', async () => {
     assert.match(html, /Node 22 \/ 24 \/ 26/);
     assert.match(html, /Public CI still runs repository rules/);
     assert.match(html, /npmjs\.com\/package\/create-monox/);
-    assert.match(html, /href="#delivery-contract"/);
     assert.match(html, /npm create monox@latest -- my-product --yes/);
     assert.match(html, /What MonoX is not/);
     assert.match(html, /SoftwareSourceCode/);

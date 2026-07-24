@@ -6,9 +6,8 @@ agents. It has no runtime dependencies and supports the Node.js 22, 24, and 26 m
 Generated Yarn and pnpm workflows install Corepack 0.35.0 explicitly, including on Node.js distributions that
 do not bundle Corepack.
 
-The package is available as the
-[`create-monox` npm package](https://www.npmjs.com/package/create-monox). Releases use npm trusted publishing
-from the protected GitHub workflow and include registry provenance.
+The package is available as the [`create-monox` npm package](https://www.npmjs.com/package/create-monox).
+Releases use npm trusted publishing from the protected GitHub workflow and include registry provenance.
 
 ## Usage
 
