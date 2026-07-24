@@ -4,22 +4,29 @@ All notable changes will be documented here.
 
 ## Unreleased
 
-## 0.1.1 (public preview)
+## 0.1.1
 
 ### Added
 
 - Full quality and compatibility CI on Node.js 22.22.2+, 24.15.0+, and 26.x.
-- Explicit Corepack installation in repository and generated CI, including Node.js distributions that do not
-  bundle it.
-- A kind-based Kubernetes runtime smoke that builds, applies, rolls out, checks workload policy, and probes
-  the synthetic API Service.
+- Pinned Yarn, npm, and pnpm adapters across generation, documentation, CI, and Docker builds.
+- Node.js 26 consumer tests that scaffold, install, and test every supported package-manager layout without a
+  bundled Corepack binary.
+- A kind-based Kubernetes runtime smoke for both the reference repository and a freshly generated project.
 - Initial architecture decision records for explicit contracts, render and apply separation, model-output
   safety, and package-manager adapters.
+- A public technical product page, complete MonoX brand kit, favicon set, README header, and social cards.
 
 ### Fixed
 
 - Narrowed Node.js engine metadata to the supported even-numbered majors instead of also accepting unsupported
   Node.js 23 and 25 releases.
+- Made the one-time Yarn scaffold install safe in public pull-request CI while preserving hardened immutable
+  installs after the generated lockfile is committed.
+- Aligned generated Docker and Kubernetes security contexts on numeric non-root UID and GID 10001.
+- Rejected rolling updates when both surge and unavailable limits resolve to zero, including percentage
+  values.
+- Removed mobile overflow from Quick Start commands and the capability status layout.
 - Replaced stale pre-release wording in the npm README with install and provenance information that remains
   accurate after publication.
 
