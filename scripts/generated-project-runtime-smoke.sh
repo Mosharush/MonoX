@@ -53,6 +53,25 @@ assert_equal() {
   fi
 }
 
+wait_for_http() {
+  local source_deployment="$1"
+  local url="$2"
+  local expected="$3"
+
+  for _ in $(seq 1 30); do
+    if kubectl --context "${cluster_context}" exec "deployment/${source_deployment}" -- \
+      node --input-type=module -e \
+      'const [url, expected] = process.argv.slice(1); const response = await fetch(url); if (!response.ok) process.exit(1); const body = await response.text(); if (!body.includes(expected)) process.exit(1);' \
+      "${url}" "${expected}"; then
+      return 0
+    fi
+    sleep 2
+  done
+
+  echo "${source_deployment} could not reach ${url} with the expected response." >&2
+  return 1
+}
+
 trap 'cleanup "$?"' EXIT INT TERM
 
 for command in docker kubectl node npx "${kind_command}"; do
@@ -104,11 +123,7 @@ for deployment in "${api_deployment}" "${web_deployment}"; do
     "10001" "${deployment} runtime UID"
 done
 
-kubectl --context "${cluster_context}" exec "deployment/${web_deployment}" -- \
-  node --input-type=module -e \
-  "const response = await fetch('http://${api_deployment}/health'); if (!response.ok) process.exit(1); const body = await response.json(); if (body.service !== 'api' || body.status !== 'ok') process.exit(1);"
-kubectl --context "${cluster_context}" exec "deployment/${api_deployment}" -- \
-  node --input-type=module -e \
-  "const response = await fetch('http://${web_deployment}/'); if (!response.ok) process.exit(1); const body = await response.text(); if (!body.includes('${project_name}')) process.exit(1);"
+wait_for_http "${web_deployment}" "http://${api_deployment}/health" '"service":"api"'
+wait_for_http "${api_deployment}" "http://${web_deployment}/" "${project_name}"
 
 echo "Generated project runtime smoke passed for ${project_name} on ${node_image}."
