@@ -12,15 +12,15 @@ how services run locally, and how workloads are packaged for container platforms
 
 MonoX composes existing workspace, container, and Kubernetes tools instead of replacing them.
 
-> Status: Public preview. `create-monox` is available on npm through trusted publishing with provenance.
+> Status: `create-monox` is available on npm through trusted publishing with provenance.
 
 [Project site](https://monox.dev) | [Source](https://github.com/Mosharush/MonoX) |
-[Architecture](docs/architecture.md) | [create-monox](packages/create-monox/README.md) |
+[Architecture](docs/architecture.md) | [create-monox on npm](https://www.npmjs.com/package/create-monox) |
 [Roadmap](docs/roadmap.md)
 
 ## What works today
 
-- Yarn workspaces with package-manager-independent discovery
+- A Yarn 4 reference workspace with package-manager-independent discovery
 - Interactive or non-interactive multi-workspace development runner
 - Changed-workspace detection with propagation to internal dependents
 - Synthetic Node API and web examples with health endpoints and tests
@@ -70,14 +70,15 @@ The starter runs:
 npm create monox@latest -- my-product --yes
 ```
 
-The generator installs dependencies by default, creates the selected package manager's lockfile, and can
-include Docker, Kubernetes, both, or neither.
+The generator creates Yarn, npm, or pnpm workspace layouts. It installs dependencies by default, creates the
+selected package manager's lockfile, and can include Docker, Kubernetes, both, or neither. The MonoX reference
+repository itself uses Yarn 4.
 
 ```bash
 npm create monox@latest -- my-product --package-manager yarn --infra all --yes
 ```
 
-Use `yarn run create my-product --yes` when developing the generator from a checked-out repository.
+Contributors working directly from this repository can run `yarn run create my-product --yes` instead.
 
 It refuses nonempty and symlink destinations. Pass `--no-install` only when another process will create and
 commit the lockfile before CI or Docker runs. Generated projects contain synthetic code, CI, architecture
@@ -123,7 +124,7 @@ ephemeral cluster, waits for rollout, checks workload policy, and probes the run
 
 ## Public-source boundary
 
-MonoX began as a reusable monorepo and delivery foundation created and led by Moshe Harush. This public 0.1.0
+MonoX began as a reusable monorepo and delivery foundation created and led by Moshe Harush. The public
 implementation was rebuilt in a new repository from an explicit platform specification. It does not contain
 private product history, business services, customer fixtures, production identifiers or copied deployment
 configuration. See [Provenance](PROVENANCE.md).

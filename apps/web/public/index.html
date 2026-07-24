@@ -5,33 +5,71 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="An agent-ready JavaScript monorepo starter and deployment toolkit with explicit boundaries."
+      content="MonoX is an open-source JavaScript monorepo starter and delivery toolkit that generates explicit workspace, Docker, and Kubernetes contracts for developers, CI, and coding agents."
     />
     <meta name="theme-color" content="#11151d" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="MonoX" />
-    <meta property="og:title" content="MonoX | Explicit delivery infrastructure" />
+    <meta property="og:title" content="MonoX | Explicit monorepo and delivery infrastructure" />
     <meta
       property="og:description"
-      content="An agent-ready JavaScript monorepo starter and deployment toolkit with explicit architecture boundaries."
+      content="Generate a JavaScript monorepo with explicit boundaries, repeatable validation, and bounded Docker and Kubernetes delivery artifacts."
     />
     <meta property="og:url" content="https://monox.dev/" />
-    <meta name="twitter:card" content="summary" />
+    <meta property="og:image" content="https://monox.dev/og-image.png" />
+    <meta property="og:image:secure_url" content="https://monox.dev/og-image.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="MonoX, explicit monorepo and delivery infrastructure" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="MonoX | Explicit monorepo and delivery infrastructure" />
+    <meta
+      name="twitter:description"
+      content="Generate a JavaScript monorepo with explicit boundaries, repeatable validation, and bounded Docker and Kubernetes delivery artifacts."
+    />
+    <meta name="twitter:image" content="https://monox.dev/og-image.png" />
+    <meta name="twitter:image:alt" content="MonoX, explicit monorepo and delivery infrastructure" />
     <link rel="canonical" href="https://monox.dev/" />
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
-    <title>MonoX | Explicit delivery infrastructure</title>
+    <title>MonoX | Explicit monorepo and delivery infrastructure</title>
     <link rel="stylesheet" href="/styles.css" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareSourceCode",
+        "@id": "https://monox.dev/#software",
+        "name": "MonoX",
+        "url": "https://monox.dev/",
+        "mainEntityOfPage": "https://monox.dev/",
+        "codeRepository": "https://github.com/Mosharush/MonoX",
+        "description": "An open-source JavaScript monorepo starter and delivery toolkit with explicit workspace, validation, Docker, and Kubernetes contracts.",
+        "version": "0.1.1",
+        "programmingLanguage": "JavaScript",
+        "runtimePlatform": "Node.js",
+        "license": "https://spdx.org/licenses/MIT.html",
+        "isAccessibleForFree": true,
+        "keywords": ["JavaScript monorepo", "developer tooling", "coding agents", "Docker", "Kubernetes"],
+        "author": {
+          "@type": "Person",
+          "name": "Moshe Harush",
+          "url": "https://haru.sh/",
+          "sameAs": ["https://github.com/Mosharush", "https://www.linkedin.com/in/moshe-harush/"]
+        }
+      }
+    </script>
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to content</a>
 
-    <header class="site-header" aria-label="MonoX starter">
+    <header class="site-header" aria-label="MonoX site">
       <a class="wordmark" href="/" aria-label="MonoX home">
         <span aria-hidden="true">MX</span>
         <strong>MonoX</strong>
       </a>
       <div class="header-actions">
-        <p class="release-status">Public preview</p>
+        <p class="release-status">Available on npm</p>
+        <a class="header-source" href="https://www.npmjs.com/package/create-monox">npm</a>
         <a class="header-source" href="https://github.com/Mosharush/MonoX">GitHub</a>
       </div>
     </header>
@@ -39,28 +77,34 @@
     <main id="main-content">
       <section class="hero" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <p class="context">JavaScript monorepo and deployment toolkit</p>
+          <p class="context">JavaScript monorepo and delivery toolkit</p>
           <h1 id="hero-title">One repo.<br />Explicit boundaries.<br />Repeatable delivery.</h1>
           <p class="lede" dir="auto">
-            MonoX gives developers and coding agents the same contracts for workspaces, validation,
+            MonoX gives developers, CI, and coding agents the same contracts for workspaces, validation,
             containers, and Kubernetes. Move quickly without hiding ownership, limits, or failure modes.
           </p>
           <div class="actions">
-            <a class="primary-action" href="https://github.com/Mosharush/MonoX">View source on GitHub</a>
-            <a class="text-action" href="#delivery-contract">Inspect the delivery contract</a>
+            <a class="primary-action" href="#quick-start">Generate a project</a>
+            <a class="text-action" href="https://github.com/Mosharush/MonoX">View source on GitHub</a>
           </div>
         </div>
 
-        <aside class="command-panel" id="quick-start" aria-label="MonoX quick start">
+        <aside class="command-panel" id="quick-start" aria-labelledby="quick-start-title">
           <div class="panel-heading">
-            <span>Verification gate</span>
-            <span>Verified: Node 22 / 24 / 26</span>
+            <strong id="quick-start-title">Quick start</strong>
+            <span>Node 22 / 24 / 26</span>
           </div>
-          <pre tabindex="0"><code><span>corepack enable</span>
+          <pre tabindex="0"><code><strong>npm create monox@latest -- my-product --yes</strong>
+<span>cd my-product</span>
+<span>corepack enable</span>
 <span>yarn install --immutable</span>
 <span>yarn doctor</span>
-<strong>yarn dev --all</strong></code></pre>
-          <p>The public CI repeats the full verification gate on each supported Node.js major.</p>
+<span>yarn dev --all</span></code></pre>
+          <p>
+            The default generated workspace uses Yarn. Choose npm or pnpm with
+            <code>--package-manager</code>. The reference repository uses Yarn 4, and public CI repeats the
+            full verification gate on each supported Node.js major.
+          </p>
         </aside>
       </section>
 
@@ -78,7 +122,7 @@
             <span class="step-number">01</span>
             <div>
               <h3>Generate</h3>
-              <p>Start with synthetic apps, workspace metadata, and infrastructure adapters.</p>
+              <p>Start with synthetic apps, workspace metadata, and optional infrastructure adapters.</p>
             </div>
           </li>
           <li>
@@ -110,20 +154,111 @@
         </ol>
       </section>
 
-      <section class="release-gate" id="release-gate" aria-labelledby="release-title">
-        <p class="context">Release status</p>
-        <div class="release-layout">
-          <h2 id="release-title">Install the public preview from npm.</h2>
-          <div class="release-copy">
+      <section class="architecture" id="architecture" aria-labelledby="architecture-title">
+        <div class="section-intro">
+          <h2 id="architecture-title">The architecture stays legible from code to runtime</h2>
+          <p>
+            MonoX keeps reusable behavior, product code, and deployment adapters in separate zones. Each layer
+            depends in one direction and exposes a versioned contract to the next.
+          </p>
+        </div>
+
+        <ol class="architecture-flow" aria-label="MonoX architecture flow">
+          <li>
+            <strong>Apps</strong>
+            <span>Runnable API and web workspaces</span>
+          </li>
+          <li>
+            <strong>Reusable packages</strong>
+            <span>Workspace rules and versioned contracts</span>
+          </li>
+          <li>
+            <strong>Schemas and renderers</strong>
+            <span>Validated deployment inputs</span>
+          </li>
+          <li>
+            <strong>Delivery artifacts</strong>
+            <span>Docker Compose and Kubernetes</span>
+          </li>
+        </ol>
+
+        <p class="architecture-rule">
+          Applications may depend on packages. Packages never depend on applications. Infrastructure renders
+          product-independent artifacts without importing application source.
+        </p>
+      </section>
+
+      <section class="capabilities" id="capabilities" aria-labelledby="capabilities-title">
+        <div class="section-intro">
+          <h2 id="capabilities-title">What exists now, and what comes next</h2>
+          <p>
+            Status describes MonoX itself, not a comparison with another monorepo tool. Planned work stays
+            separate from what the current 0.1 line can already generate and validate.
+          </p>
+        </div>
+
+        <div class="capability-table-wrap" tabindex="0" aria-label="Scrollable capability status table">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Capability</th>
+                <th scope="col">Status</th>
+                <th scope="col">Evidence</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Workspace discovery and multi-workspace runner</th>
+                <td><span class="status status-available">Available in 0.1</span></td>
+                <td>Typed workspace metadata and explicit all or selected runs</td>
+              </tr>
+              <tr>
+                <th scope="row">Project generator</th>
+                <td><span class="status status-available">Available in 0.1</span></td>
+                <td>Yarn, npm, or pnpm layouts with optional infrastructure</td>
+              </tr>
+              <tr>
+                <th scope="row">Changed-workspace detection</th>
+                <td><span class="status status-available">Available in 0.1</span></td>
+                <td>Git comparison with dependent propagation and fail-open behavior</td>
+              </tr>
+              <tr>
+                <th scope="row">Docker Compose and Kubernetes rendering</th>
+                <td><span class="status status-available">Available in 0.1</span></td>
+                <td>Validated artifacts with probes, resources, policies, and bounded scaling</td>
+              </tr>
+              <tr>
+                <th scope="row">create-monox package</th>
+                <td><span class="status status-available">Released in 0.1</span></td>
+                <td>Public npm package with trusted publishing and provenance</td>
+              </tr>
+              <tr>
+                <th scope="row">Task graph, cache, and selective execution</th>
+                <td><span class="status status-planned">Planned for 0.2</span></td>
+                <td>Task-level planning, cache behavior, and explanation</td>
+              </tr>
+              <tr>
+                <th scope="row">Cloud adapters</th>
+                <td><span class="status status-planned">Planned for 0.3</span></td>
+                <td>Optional provider adapters using workload identity</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="limits" id="boundaries" aria-labelledby="limits-title">
+        <div class="limits-layout">
+          <h2 id="limits-title">What MonoX is not</h2>
+          <div>
             <p>
-              <code>create-monox</code> 0.1.0 was published through the protected GitHub workflow with npm
-              provenance. Patch releases use the same trusted-publishing boundary.
+              MonoX is not a replacement for your package manager, container runtime, or Kubernetes control
+              plane.
             </p>
-            <p class="release-next">
-              <a href="https://www.npmjs.com/package/create-monox">View the npm package</a> or
-              <a href="https://github.com/Mosharush/MonoX/releases/tag/create-monox-v0.1.0"
-                >read the first release notes</a
-              >.
+            <p>
+              It generates, validates, and explains delivery artifacts. Applying those artifacts remains an
+              explicit, protected operation. Production secrets stay in external secret stores, and every
+              scaling policy keeps a configured maximum.
             </p>
           </div>
         </div>
@@ -131,8 +266,12 @@
     </main>
 
     <footer>
-      <p>© 2026 Moshe Harush. MIT licensed.</p>
-      <p><a href="https://github.com/Mosharush/MonoX">Source on GitHub</a>.</p>
+      <p>Copyright 2026 Moshe Harush. MonoX is MIT licensed.</p>
+      <p>
+        <a href="https://www.npmjs.com/package/create-monox">npm</a> ·
+        <a href="https://github.com/Mosharush/MonoX">GitHub</a> ·
+        <a href="https://github.com/Mosharush/MonoX/tree/main/docs">Documentation</a>
+      </p>
     </footer>
   </body>
 </html>
