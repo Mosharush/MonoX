@@ -60,11 +60,14 @@ for (const workspace of workspaces) {
     failures.push(`${workspace.location}: package name must use the @monox scope`);
   }
   if (publishableWorkspaces.has(workspace.name)) {
-    if (workspace.manifest.private !== false) {
-      failures.push(`${workspace.location}: release-reviewed packages must set private to false`);
+    if (workspace.manifest.private === true) {
+      failures.push(`${workspace.location}: release-reviewed packages must not be private`);
     }
     if (workspace.manifest.license !== 'MIT') {
       failures.push(`${workspace.location}: release-reviewed packages must declare the MIT license`);
+    }
+    if (workspace.manifest.publishConfig?.access !== 'public') {
+      failures.push(`${workspace.location}: release-reviewed packages must set public registry access`);
     }
     if (!workspace.manifest.files?.includes('LICENSE')) {
       failures.push(`${workspace.location}: published files must include LICENSE`);
