@@ -38,7 +38,7 @@ body {
     linear-gradient(to right, rgb(43 62 88 / 20%) 1px, transparent 1px),
     linear-gradient(to bottom, rgb(43 62 88 / 20%) 1px, transparent 1px);
   background-size: 3rem 3rem;
-  color: oklch(0.965 0.008 255);
+  color: #f7f9fc;
   line-height: 1.5;
 }
 
