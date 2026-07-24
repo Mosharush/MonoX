@@ -1,8 +1,8 @@
 # MonoX
 
-[![Release: 0.1.0 public preview](https://img.shields.io/badge/release-0.1.0%20public%20preview-d6a72f)](CHANGELOG.md)
+[![create-monox on npm](https://img.shields.io/npm/v/create-monox?label=create-monox)](https://www.npmjs.com/package/create-monox)
 [![License: MIT](https://img.shields.io/badge/license-MIT-6f8cff)](LICENSE)
-[![Node.js: 22 to 26](https://img.shields.io/badge/node-22%20to%2026-5fa04e)](package.json)
+[![Node.js: 22, 24, 26](https://img.shields.io/badge/node-22%20%7C%2024%20%7C%2026-5fa04e)](package.json)
 
 MonoX is an agent-ready JavaScript monorepo starter and deployment toolkit for teams that want fast delivery
 without losing architectural control.
@@ -12,7 +12,7 @@ how services run locally, and how workloads are packaged for container platforms
 
 MonoX composes existing workspace, container, and Kubernetes tools instead of replacing them.
 
-> Status: Public preview. Publishing `create-monox` 0.1.0 is the remaining release gate.
+> Status: Public preview. `create-monox` is available on npm through trusted publishing with provenance.
 
 [Project site](https://monox.dev) | [Source](https://github.com/Mosharush/MonoX) |
 [Architecture](docs/architecture.md) | [create-monox](packages/create-monox/README.md) |
@@ -22,6 +22,7 @@ MonoX composes existing workspace, container, and Kubernetes tools instead of re
 
 - Yarn workspaces with package-manager-independent discovery
 - Interactive or non-interactive multi-workspace development runner
+- Changed-workspace detection with propagation to internal dependents
 - Synthetic Node API and web examples with health endpoints and tests
 - A deterministic `create-monox` generator that never clones a private repository
 - Versioned deployment configuration and Kubernetes rendering
@@ -37,7 +38,9 @@ stay visible in configuration.
 
 ## Quick start
 
-Requirements: Node.js 22 through 26 and Corepack.
+Requirements: Node.js 22, 24, or 26 and Corepack. These are the supported majors; odd-numbered releases are
+not part of the compatibility contract. Node.js distributions that do not bundle Corepack can install the
+version used in CI with `npm install --global corepack@0.35.0`.
 
 ```bash
 corepack enable
@@ -64,15 +67,17 @@ The starter runs:
 ## Generate a project
 
 ```bash
-yarn run create my-product --yes
+npm create monox@latest -- my-product --yes
 ```
 
 The generator installs dependencies by default, creates the selected package manager's lockfile, and can
 include Docker, Kubernetes, both, or neither.
 
 ```bash
-yarn run create my-product --package-manager yarn --infra all --yes
+npm create monox@latest -- my-product --package-manager yarn --infra all --yes
 ```
+
+Use `yarn run create my-product --yes` when developing the generator from a checked-out repository.
 
 It refuses nonempty and symlink destinations. Pass `--no-install` only when another process will create and
 commit the lockfile before CI or Docker runs. Generated projects contain synthetic code, CI, architecture
@@ -99,8 +104,8 @@ packages -X-> apps
 infra -X-> apps
 ```
 
-See [Architecture](docs/architecture.md), [Deployment model](docs/deployment.md) and
-[Agent contract](docs/agent-contract.md).
+See [Architecture](docs/architecture.md), [Deployment model](docs/deployment.md),
+[Architecture decisions](docs/adr/README.md) and [Agent contract](docs/agent-contract.md).
 
 ## Verification
 
@@ -110,8 +115,11 @@ The local release gate is one command:
 yarn check
 ```
 
-It covers formatting, repository boundaries, tests, builds, Kubernetes rendering and Compose validation. CI
-adds secret scanning and dependency review.
+It covers formatting, repository boundaries, tests, builds, Kubernetes rendering and Compose validation. The
+public CI repeats the full gate on Node.js 22, 24, and 26, then adds secret scanning and dependency review.
+`@monox/affected` can identify changed workspaces for targeted local validation, but it does not skip jobs in
+the public CI gate. A separate kind workflow builds the API image, applies a synthetic manifest to an
+ephemeral cluster, waits for rollout, checks workload policy, and probes the running Service.
 
 ## Public-source boundary
 

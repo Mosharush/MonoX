@@ -23,3 +23,5 @@ source of truth.
 
 Configuration schemas use semantic versions. Breaking changes require a migration note and a compatibility
 test. Adapters stay optional, and cloud-specific behavior must not leak into core workspace packages.
+
+The reasons behind these boundaries are recorded in the [architecture decision log](adr/README.md).

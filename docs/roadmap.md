@@ -3,13 +3,14 @@
 ## 0.1
 
 - Clean workspace, runner and generator contracts
+- Changed-workspace detection with internal dependent propagation
 - Synthetic API and web examples
 - Local Compose and Kubernetes workload templates
 - Hardened CI and release design
 
 ## 0.2
 
-- Dependency-aware affected graph and task cache
+- Task-level dependency graph, selective execution, cache, and cache explanations
 - Safe local remote-proxy adapter with an explicit allowlist
 - Preview environment lifecycle with TTL cleanup
 - Provider-neutral deployment diff command

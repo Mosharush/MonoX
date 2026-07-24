@@ -1,0 +1,97 @@
+{
+  "$schema": "../../packages/deploy-schema/schema/v1/deployment.schema.json",
+  "schemaVersion": "1",
+  "name": "monox-api-smoke",
+  "namespace": "monox-smoke",
+  "createNamespace": true,
+  "labels": {
+    "app.kubernetes.io/part-of": "monox-runtime-smoke",
+    "app.kubernetes.io/component": "api"
+  },
+  "replicas": 1,
+  "terminationGracePeriodSeconds": 10,
+  "image": {
+    "repository": "monox-api",
+    "tag": "smoke",
+    "pullPolicy": "IfNotPresent",
+    "pullSecrets": []
+  },
+  "container": {
+    "port": 3000,
+    "env": [
+      {
+        "name": "MONOX_ENV",
+        "value": "preview"
+      }
+    ],
+    "envFromSecrets": [],
+    "writableTmp": true
+  },
+  "service": {
+    "enabled": true,
+    "type": "ClusterIP",
+    "port": 80,
+    "annotations": {}
+  },
+  "probes": {
+    "startup": {
+      "path": "/healthz",
+      "periodSeconds": 2,
+      "failureThreshold": 30
+    },
+    "readiness": {
+      "path": "/readyz",
+      "periodSeconds": 2,
+      "failureThreshold": 10
+    },
+    "liveness": {
+      "path": "/healthz",
+      "periodSeconds": 10,
+      "failureThreshold": 3
+    }
+  },
+  "resources": {
+    "requests": {
+      "cpu": "100m",
+      "memory": "128Mi"
+    },
+    "limits": {
+      "cpu": "500m",
+      "memory": "512Mi"
+    }
+  },
+  "podDisruptionBudget": {
+    "enabled": true,
+    "minAvailable": 1
+  },
+  "topologySpread": {
+    "enabled": false,
+    "maxSkew": 1,
+    "whenUnsatisfiable": "ScheduleAnyway",
+    "topologyKeys": ["kubernetes.io/hostname"]
+  },
+  "networkPolicy": {
+    "enabled": true,
+    "ingressFrom": [
+      {
+        "namespaceLabels": {
+          "kubernetes.io/metadata.name": "monox-smoke"
+        }
+      }
+    ],
+    "egress": {
+      "dns": true,
+      "https": false,
+      "sameNamespace": true
+    }
+  },
+  "autoscaling": {
+    "mode": "none"
+  },
+  "podSecurity": {
+    "runAsUser": 10001,
+    "runAsGroup": 10001,
+    "fsGroup": 10001,
+    "readOnlyRootFilesystem": true
+  }
+}

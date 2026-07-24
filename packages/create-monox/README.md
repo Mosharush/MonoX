@@ -1,24 +1,27 @@
 # create-monox
 
 `create-monox` generates a compact JavaScript monorepo with clear ownership boundaries for people and coding
-agents. It has no runtime dependencies and supports Node.js 22 through 26.
+agents. It has no runtime dependencies and supports the Node.js 22, 24, and 26 majors.
 
-> Release status: public preview. This tree prepares `create-monox` 0.1.0 as an in-place upgrade to the
-> existing [npm package](https://www.npmjs.com/package/create-monox). The registry still serves 0.0.5 until
-> trusted publishing and the release workflow pass their final gates.
+Generated Yarn and pnpm workflows install Corepack 0.35.0 explicitly, including on Node.js distributions that
+do not bundle Corepack.
+
+The public preview is available as the
+[`create-monox` npm package](https://www.npmjs.com/package/create-monox). Releases use npm trusted publishing
+from the protected GitHub workflow and include registry provenance.
 
 ## Usage
 
-From this repository:
-
-```sh
-yarn run create my-project --yes
-```
-
-After 0.1.0 is published, npm can run the package directly:
+From npm:
 
 ```sh
 npm create monox@latest -- my-project --yes
+```
+
+From a checked-out MonoX repository:
+
+```sh
+yarn run create my-project --yes
 ```
 
 Available options:
@@ -37,7 +40,7 @@ Run `create-monox --help` for the complete command reference.
 Scripts, CI jobs, and other sessions without an interactive terminal must pass `--yes` explicitly. The CLI
 installs dependencies by default so the selected package manager creates the lockfile required by generated CI
 and Docker builds. Pass `--no-install` only when another process will run the install and commit that lockfile
-before the first push.
+before the first push. Generated CI runs its test gate on Node.js 22, 24, and 26.
 
 ## Generated layout
 

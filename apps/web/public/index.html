@@ -54,13 +54,13 @@
         <aside class="command-panel" id="quick-start" aria-label="MonoX quick start">
           <div class="panel-heading">
             <span>Verification gate</span>
-            <span>Node 22 to 26</span>
+            <span>Verified: Node 22 / 24 / 26</span>
           </div>
           <pre tabindex="0"><code><span>corepack enable</span>
 <span>yarn install --immutable</span>
 <span>yarn doctor</span>
 <strong>yarn dev --all</strong></code></pre>
-          <p>Run these checks from the public repository. Package publishing is the final 0.1.0 gate.</p>
+          <p>The public CI repeats the full verification gate on each supported Node.js major.</p>
         </aside>
       </section>
 
@@ -93,8 +93,8 @@
             <div>
               <h3>Verify</h3>
               <p>
-                Calculate affected workspaces, then run repository rules, tests, builds, and deployment
-                validation.
+                Identify affected workspaces for targeted validation. Public CI still runs repository rules,
+                tests, builds, and deployment validation across the full repository.
               </p>
             </div>
           </li>
@@ -113,13 +113,18 @@
       <section class="release-gate" id="release-gate" aria-labelledby="release-title">
         <p class="context">Release status</p>
         <div class="release-layout">
-          <h2 id="release-title">0.1.0 is in public preview.</h2>
+          <h2 id="release-title">Install the public preview from npm.</h2>
           <div class="release-copy">
             <p>
-              The source is public and validated in CI. Publishing <code>create-monox</code> 0.1.0 through npm
-              trusted publishing is the remaining release gate.
+              <code>create-monox</code> 0.1.0 was published through the protected GitHub workflow with npm
+              provenance. Patch releases use the same trusted-publishing boundary.
             </p>
-            <p class="release-next">Next gate: npm trusted publishing and a registry smoke test.</p>
+            <p class="release-next">
+              <a href="https://www.npmjs.com/package/create-monox">View the npm package</a> or
+              <a href="https://github.com/Mosharush/MonoX/releases/tag/create-monox-v0.1.0"
+                >read the first release notes</a
+              >.
+            </p>
           </div>
         </div>
       </section>

@@ -13,7 +13,11 @@ test('serves the starter page and health endpoint', async () => {
     assert.match(page.headers.get('content-security-policy'), /script-src 'none'/);
     const html = await page.text();
     assert.match(html, /Explicit boundaries/);
-    assert.match(html, /0\.1\.0 is in public preview/);
+    assert.match(html, /Verified: Node 22 \/ 24 \/ 26/);
+    assert.match(html, /Public CI still runs repository rules/);
+    assert.match(html, /Install the public preview from npm/);
+    assert.match(html, /npmjs\.com\/package\/create-monox/);
+    assert.match(html, /releases\/tag\/create-monox-v0\.1\.0/);
     assert.match(html, /href="#delivery-contract"/);
     assert.match(html, /github\.com\/Mosharush\/MonoX/);
     assert.match(html, /https:\/\/monox\.dev\//);

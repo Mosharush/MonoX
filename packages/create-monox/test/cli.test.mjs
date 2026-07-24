@@ -127,7 +127,7 @@ test('CLI runs when installed through a package-manager symlink', async () => {
     await symlink(cliPath, executable);
     const { stdout, stderr } = await execFileAsync(executable, ['--version']);
     assert.equal(stderr, '');
-    assert.equal(stdout.trim(), '0.1.0');
+    assert.equal(stdout.trim(), '0.1.1');
   } finally {
     await rm(parent, { recursive: true, force: true });
   }

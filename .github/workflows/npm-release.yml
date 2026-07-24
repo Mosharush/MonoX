@@ -91,6 +91,9 @@ jobs:
             exit 1
           fi
 
+      - name: Install pinned Corepack
+        run: npm install --global corepack@0.35.0
+
       - name: Enable Corepack
         run: corepack enable
 

@@ -205,7 +205,7 @@ function rootPackage({ name, packageManager }) {
     private: true,
     type: 'module',
     packageManager: PACKAGE_MANAGER_VERSIONS[packageManager],
-    engines: { node: '>=22 <27' },
+    engines: { node: '^22.0.0 || ^24.0.0 || ^26.0.0' },
     workspaces: ['apps/*', 'packages/*'],
     scripts: {
       'dev:api': 'node --watch apps/api/src/server.mjs',
@@ -437,7 +437,10 @@ Read \`AGENTS.md\` before changing workspace boundaries or infrastructure.
 }
 
 function ciWorkflow({ packageManager }) {
-  const enableCorepack = packageManager === 'npm' ? '' : '      - run: corepack enable\n';
+  const enableCorepack =
+    packageManager === 'npm'
+      ? ''
+      : '      - run: npm install --global corepack@0.35.0\n      - run: corepack enable\n';
   const lockfile = LOCKFILE_NAMES[packageManager];
   const installCommand = {
     yarn: 'yarn install --immutable',
@@ -458,14 +461,22 @@ permissions:
 
 jobs:
   test:
+    name: Test (Node \${{ matrix.node }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node:
+          - 22
+          - 24
+          - 26
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 22
+          node-version: \${{ matrix.node }}
 ${enableCorepack}      - name: Require committed ${lockfile}
         shell: bash
         run: |

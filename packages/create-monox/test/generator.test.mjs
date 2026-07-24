@@ -46,6 +46,7 @@ test('generates the default workspace with Docker and Kubernetes templates', asy
     assert.equal(packageJson.name, 'sample-app');
     assert.equal(packageJson.private, true);
     assert.equal(packageJson.packageManager, 'yarn@4.9.1');
+    assert.equal(packageJson.engines.node, '^22.0.0 || ^24.0.0 || ^26.0.0');
     assert.deepEqual(packageJson.workspaces, ['apps/*', 'packages/*']);
     assert.equal(await readFile(join(destination, '.yarnrc.yml'), 'utf8'), 'nodeLinker: node-modules\n');
 
@@ -60,7 +61,10 @@ test('generates the default workspace with Docker and Kubernetes templates', asy
     assert.match(workflow, /actions\/checkout@[a-f0-9]{40}/);
     assert.match(workflow, /actions\/setup-node@[a-f0-9]{40}/);
     assert.match(workflow, /persist-credentials: false/);
+    assert.match(workflow, /node:\n\s+- 22\n\s+- 24\n\s+- 26/);
+    assert.match(workflow, /node-version: \$\{\{ matrix\.node \}\}/);
     assert.match(workflow, /Require committed yarn\.lock/);
+    assert.match(workflow, /npm install --global corepack@0\.35\.0/);
     assert.match(workflow, /yarn install --immutable/);
 
     const apiDockerfile = await readFile(join(destination, 'infra/docker/api.Dockerfile'), 'utf8');
