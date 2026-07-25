@@ -4,6 +4,11 @@ All notable changes will be documented here.
 
 ## Unreleased
 
+### Security
+
+- Verify every published `create-monox` version through the public registry by generating and testing a clean
+  npm-based consumer after trusted publishing completes.
+
 ## 0.1.2
 
 The 0.1.1 source tag was not published to npm because its protected release job stopped during npm client
