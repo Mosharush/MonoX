@@ -254,8 +254,32 @@ test('renders a v2 non-network worker without a Service or Ingress', async () =>
   assert.doesNotMatch(yaml, /allow_pod_self_patch|verbs:\s*\[[^\]]*patch/i);
 });
 
+test('preserves the image WORKDIR for a relative runtime working directory', async () => {
+  const input = await fixture('v2-worker');
+  input.deployment.runtime.workingDirectory = 'apps/queue-worker';
+
+  const workload = byKind(buildKubernetesResources(input), 'Deployment');
+  const container = workload.spec.template.spec.containers[0];
+  assert.equal(Object.hasOwn(container, 'workingDir'), false);
+});
+
+test('renders an explicit absolute container working directory', async () => {
+  const input = await fixture('v2-worker');
+  input.deployment.runtime.workingDirectory = '/workspace/apps/queue-worker';
+
+  const workload = byKind(buildKubernetesResources(input), 'Deployment');
+  const container = workload.spec.template.spec.containers[0];
+  assert.equal(container.workingDir, '/workspace/apps/queue-worker');
+});
+
 test('renders a v2 GPU model with per-replica cache and ServiceMonitor', async () => {
-  const resources = buildKubernetesResources(await fixture('v2-model'));
+  const input = await fixture('v2-model');
+  input.deployment.labels = {
+    team: 'models',
+    'app.kubernetes.io/managed-by': 'untrusted-override',
+    'monox.dev/environment': 'untrusted-override',
+  };
+  const resources = buildKubernetesResources(input);
   assert.deepEqual(
     resources.map(({ kind }) => kind),
     [
@@ -277,6 +301,9 @@ test('renders a v2 GPU model with per-replica cache and ServiceMonitor', async (
     'embedding-model@example.invalid'
   );
   const workload = byKind(resources, 'StatefulSet');
+  assert.equal(workload.metadata.labels.team, 'models');
+  assert.equal(workload.metadata.labels['app.kubernetes.io/managed-by'], 'monox');
+  assert.equal(workload.metadata.labels['monox.dev/environment'], 'production');
   assert.equal(workload.spec.volumeClaimTemplates[0].spec.resources.requests.storage, '100Gi');
   assert.equal(workload.spec.template.spec.nodeSelector['nvidia.com/gpu.present'], 'true');
   const workloadResources = workload.spec.template.spec.containers[0].resources;
@@ -294,7 +321,16 @@ test('renders a v2 GPU model with per-replica cache and ServiceMonitor', async (
     'http://prometheus.monitoring.svc.cluster.local:9090'
   );
   assert.equal(byKind(resources, 'ServiceMonitor').spec.endpoints[0].port, 'metrics');
-  const monitoringIngress = byKind(resources, 'NetworkPolicy').spec.ingress.find(
+  const networkPolicy = byKind(resources, 'NetworkPolicy');
+  assert.deepEqual(networkPolicy.spec.ingress[0].from[1], {
+    podSelector: {
+      matchLabels: {
+        'app.kubernetes.io/managed-by': 'monox',
+        'monox.dev/environment': 'production',
+      },
+    },
+  });
+  const monitoringIngress = networkPolicy.spec.ingress.find(
     (rule) => rule.from?.[0]?.namespaceSelector?.matchLabels?.['monox.dev/monitoring-access'] === 'true'
   );
   assert.equal(monitoringIngress.ports[0].port, 9090);

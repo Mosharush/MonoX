@@ -69,7 +69,7 @@ jobs:
         uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
         with:
           php-version: '8.4'
-          tools: composer
+          tools: composer:2.8.12
           coverage: none
 
       - name: Set up Go
@@ -93,7 +93,7 @@ jobs:
             --package-manager npm \
             --workspace api=node-fastify-api \
             --workspace python-api=python-fastapi-api \
-            --workspace php-lib=php-library \
+            --workspace php-api=php-laravel-api \
             --workspace go-lib=go-library \
             --delivery docker:local \
             --infra none \
@@ -108,6 +108,45 @@ jobs:
           npx --yes npm@12.0.1 install
           python -m pip install --disable-pip-version-check uv==0.9.7
           npx --yes npm@12.0.1 run bootstrap:toolchains
+
+      - name: Verify Laravel environment file protection
+        shell: bash
+        run: |
+          set -euo pipefail
+          laravel_directory="${MONOX_POLYGLOT_DIRECTORY}/apps/php-api"
+          environment_file="${laravel_directory}/.env"
+          sentinel="${RUNNER_TEMP}/monox-laravel-sentinel"
+
+          rm -f "${environment_file}"
+          php "${laravel_directory}/scripts/bootstrap-environment.php"
+          test "$(stat -c '%a' "${environment_file}")" = 600
+          first_key="$(sed -n 's/^APP_KEY=//p' "${environment_file}")"
+          test -n "${first_key}"
+
+          php "${laravel_directory}/scripts/bootstrap-environment.php"
+          second_key="$(sed -n 's/^APP_KEY=//p' "${environment_file}")"
+          test "${second_key}" = "${first_key}"
+
+          chmod 0644 "${environment_file}"
+          php "${laravel_directory}/scripts/bootstrap-environment.php"
+          test "$(stat -c '%a' "${environment_file}")" = 600
+          protected_key="$(sed -n 's/^APP_KEY=//p' "${environment_file}")"
+          test "${protected_key}" = "${first_key}"
+
+          printf '%s\n' 'outside-sentinel' > "${sentinel}"
+          chmod 0640 "${sentinel}"
+          sentinel_mode="$(stat -c '%a' "${sentinel}")"
+          rm -f "${environment_file}"
+          ln -s "${sentinel}" "${environment_file}"
+          if php "${laravel_directory}/scripts/bootstrap-environment.php"; then
+            echo 'Laravel environment bootstrap followed a symlink.' >&2
+            exit 1
+          fi
+          test "$(cat "${sentinel}")" = outside-sentinel
+          test "$(stat -c '%a' "${sentinel}")" = "${sentinel_mode}"
+
+          rm "${environment_file}"
+          php "${laravel_directory}/scripts/bootstrap-environment.php"
 
       - name: Verify, test and build generated workspaces
         run: |
@@ -124,19 +163,24 @@ jobs:
           cd "${MONOX_POLYGLOT_DIRECTORY}"
           api_pid=""
           python_pid=""
+          php_pid=""
           trap '
             if [[ -n "${api_pid}" ]]; then kill "${api_pid}" 2>/dev/null || true; fi
             if [[ -n "${python_pid}" ]]; then kill "${python_pid}" 2>/dev/null || true; fi
+            if [[ -n "${php_pid}" ]]; then kill "${php_pid}" 2>/dev/null || true; fi
           ' EXIT
 
           npx --yes npm@12.0.1 run start:api > "${RUNNER_TEMP}/monox-node-api.log" 2>&1 &
           api_pid="$!"
           npx --yes npm@12.0.1 run start:python-api > "${RUNNER_TEMP}/monox-python-api.log" 2>&1 &
           python_pid="$!"
+          npx --yes npm@12.0.1 run start:php-api > "${RUNNER_TEMP}/monox-php-api.log" 2>&1 &
+          php_pid="$!"
 
           for _ in {1..30}; do
             if curl --fail --silent http://127.0.0.1:3001/health >/dev/null && \
-              curl --fail --silent http://127.0.0.1:8000/health >/dev/null; then
+              curl --fail --silent http://127.0.0.1:8000/health >/dev/null && \
+              curl --fail --silent http://127.0.0.1:8080/health >/dev/null; then
               exit 0
             fi
             sleep 1
@@ -144,6 +188,7 @@ jobs:
 
           cat "${RUNNER_TEMP}/monox-node-api.log" >&2
           cat "${RUNNER_TEMP}/monox-python-api.log" >&2
+          cat "${RUNNER_TEMP}/monox-php-api.log" >&2
           exit 1
 
   local-cloudapter-smoke:

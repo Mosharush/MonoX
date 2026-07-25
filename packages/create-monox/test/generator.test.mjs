@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { chmod, mkdtemp, mkdir, readFile, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
+import { pathToFileURL } from 'node:url';
 
 import { validateMonoXConfigV2 } from '../../config/src/index.mjs';
 import { validateDeploymentSpecV2 } from '../../deploy-schema/src/index.mjs';
@@ -20,6 +21,7 @@ import {
   generateProject,
   parseWorkspaceSelection,
   resolveDestination,
+  runCommand,
   validateProjectName,
 } from '../src/generator.mjs';
 import { workspaceDirectory } from '../src/templates.mjs';
@@ -131,7 +133,12 @@ test('catalog contains every approved built-in template and checksums all recipe
   assert.equal(ADDON_IDS.length, 28);
   const catalog = catalogManifest();
   assert.match(catalog.integrity, /^sha256-[A-Za-z0-9+/]{43}=$/);
-  for (const entry of [...Object.values(catalog.workspaces), ...Object.values(catalog.addons)]) {
+  const version11Recipes = new Set(['angular-web', 'php-laravel-api', 'react-vite-web', 'vue-vite-web']);
+  for (const [id, entry] of Object.entries(catalog.workspaces)) {
+    assert.equal(entry.version, version11Recipes.has(id) ? '1.1.0' : '1.0.0');
+    assert.match(entry.integrity, /^sha256-/);
+  }
+  for (const entry of Object.values(catalog.addons)) {
     assert.equal(entry.version, '1.0.0');
     assert.match(entry.integrity, /^sha256-/);
   }
@@ -248,6 +255,99 @@ test('renders and validates the complete JS, Python, PHP and Go workspace catalo
   });
 });
 
+test('static web recipes use the read-only production server safely', async () => {
+  await withTemporaryDirectory(async (parent) => {
+    const destination = join(parent, 'static-app');
+    const recipes = [
+      ['react', 'react-vite-web', 'vite'],
+      ['vue', 'vue-vite-web', 'vite'],
+      ['angular', 'angular-web', 'ng serve'],
+    ];
+    await generateProject({
+      name: 'static-app',
+      directory: destination,
+      workspaces: recipes.map(([name, template]) => `${name}=${template}`),
+      infra: 'docker',
+      delivery: 'docker:local',
+      git: false,
+    });
+
+    for (const [name, _template, developmentCommand] of recipes) {
+      const workspace = join(destination, 'apps', name);
+      const manifest = JSON.parse(await readFile(join(workspace, 'package.json'), 'utf8'));
+      const dockerfile = await readFile(join(destination, 'infra/docker', `${name}.Dockerfile`), 'utf8');
+      assert.equal(manifest.scripts.dev, developmentCommand);
+      assert.equal(manifest.scripts.start, 'node scripts/serve-static.mjs');
+      assert.deepEqual(manifest.deployment.runtime.command, ['node', 'scripts/serve-static.mjs']);
+      assert.match(dockerfile, /CMD \["node","scripts\/serve-static\.mjs"\]/);
+      assert.doesNotMatch(
+        JSON.stringify({ start: manifest.scripts.start, runtime: manifest.deployment.runtime, dockerfile }),
+        /vite preview|ng serve/
+      );
+      assert.equal((await stat(join(workspace, 'scripts/serve-static.mjs'))).isFile(), true);
+    }
+
+    const angularServer = await readFile(join(destination, 'apps/angular/scripts/serve-static.mjs'), 'utf8');
+    assert.match(angularServer, /new URL\('\.\.\/dist\/browser\/'/);
+
+    const reactWorkspace = join(destination, 'apps/react');
+    const staticRoot = join(reactWorkspace, 'dist');
+    await mkdir(join(staticRoot, 'assets'), { recursive: true });
+    await writeFile(join(staticRoot, 'index.html'), '<!doctype html><h1>Static app</h1>\n');
+    await writeFile(join(staticRoot, 'assets/app.js'), 'console.log("static app");\n');
+    const outside = join(reactWorkspace, 'outside.txt');
+    const outsideWithoutExtension = join(reactWorkspace, 'outside');
+    await writeFile(outside, 'not public\n');
+    await writeFile(outsideWithoutExtension, 'also not public\n');
+    await symlink(outside, join(staticRoot, 'leak.txt'));
+
+    const serverModule = await import(
+      `${pathToFileURL(join(reactWorkspace, 'scripts/serve-static.mjs')).href}?test=${Date.now()}`
+    );
+    const server = await serverModule.createStaticServer();
+    await new Promise((resolvePromise, rejectPromise) => {
+      server.once('error', rejectPromise);
+      server.listen(0, '127.0.0.1', resolvePromise);
+    });
+    try {
+      const address = server.address();
+      assert.equal(typeof address, 'object');
+      const baseUrl = `http://127.0.0.1:${address.port}`;
+
+      const index = await fetch(`${baseUrl}/`);
+      assert.equal(index.status, 200);
+      assert.match(index.headers.get('content-type'), /^text\/html/);
+      assert.equal(index.headers.get('x-content-type-options'), 'nosniff');
+      assert.match(index.headers.get('content-security-policy'), /default-src 'self'/);
+      assert.match(await index.text(), /Static app/);
+
+      const head = await fetch(`${baseUrl}/assets/app.js`, { method: 'HEAD' });
+      assert.equal(head.status, 200);
+      assert.match(head.headers.get('content-type'), /^text\/javascript/);
+      assert.equal(await head.text(), '');
+
+      const fallback = await fetch(`${baseUrl}/dashboard/settings`);
+      assert.equal(fallback.status, 200);
+      assert.match(await fallback.text(), /Static app/);
+
+      assert.equal((await fetch(`${baseUrl}/missing.js`)).status, 404);
+      assert.equal((await fetch(`${baseUrl}/leak.txt`)).status, 404);
+      assert.equal((await fetch(`${baseUrl}/%2e%2e%2foutside.txt`)).status, 400);
+      const extensionlessTraversal = await fetch(`${baseUrl}/%2e%2e%2foutside`);
+      assert.equal(extensionlessTraversal.status, 400);
+      assert.doesNotMatch(await extensionlessTraversal.text(), /Static app/);
+
+      const post = await fetch(`${baseUrl}/`, { method: 'POST' });
+      assert.equal(post.status, 405);
+      assert.equal(post.headers.get('allow'), 'GET, HEAD');
+    } finally {
+      await new Promise((resolvePromise, rejectPromise) => {
+        server.close((error) => (error ? rejectPromise(error) : resolvePromise()));
+      });
+    }
+  });
+});
+
 test('produces byte-identical tracked content and a complete deterministic lock', async () => {
   await withTemporaryDirectory(async (parent) => {
     const common = {
@@ -310,10 +410,28 @@ test('renders secure local add-ons and fails closed for unverified Kubernetes ch
       }
     }
     assert.doesNotMatch(compose, /(?:PASSWORD|TOKEN|API_KEY):\s+(?:admin|password|secret|changeme)\b/i);
+    for (const environmentName of ['REDIS_PASSWORD', 'NATS_TOKEN', 'TYPESENSE_API_KEY']) {
+      assert.doesNotMatch(compose, new RegExp(environmentName));
+    }
+    for (const [service, secretName, fileName] of [
+      ['redis', 'redis_password', 'redis-password'],
+      ['nats', 'nats_token', 'nats-token'],
+      ['typesense', 'typesense_api_key', 'typesense-api-key'],
+    ]) {
+      assert.match(compose, new RegExp(`^  ${service}:$`, 'm'));
+      assert.match(compose, new RegExp(`^    secrets: \\[${secretName}\\]$`, 'm'));
+      assert.match(
+        compose,
+        new RegExp(`^  ${secretName}:\\n    file: \\.\\.\\/\\.\\.\\/\\.monox\\/secrets\\/${fileName}$`, 'm')
+      );
+    }
+    assert.match(compose, /entrypoint: \[\/bin\/sh, \/opt\/monox\/redis-start\.sh\]/);
+    assert.match(compose, /test: \[CMD, \/bin\/sh, \/opt\/monox\/redis-healthcheck\.sh\]/);
+    assert.match(compose, /entrypoint: \[\/bin\/sh, \/opt\/monox\/nats-start\.sh\]/);
+    assert.match(compose, /entrypoint: \[\/bin\/sh, \/opt\/monox\/typesense-start\.sh\]/);
     assert.match(compose, /POSTGRES_PASSWORD: \$\{POSTGRES_PASSWORD:\?Set POSTGRES_PASSWORD\}/);
     assert.match(compose, /QDRANT__SERVICE__API_KEY: \$\{QDRANT_API_KEY:\?Set QDRANT_API_KEY\}/);
     assert.match(compose, /127\.0\.0\.1:5432:5432/);
-    assert.match(compose, /--store_dir=\/data/);
     assert.match(compose, /keycloak-data:\/opt\/keycloak\/data/);
     for (const supportFile of [
       'grafana-datasources.yaml',
@@ -337,6 +455,74 @@ test('renders secure local add-ons and fails closed for unverified Kubernetes ch
       })
       .sort();
     assert.deepEqual(exampleNames, requiredNames);
+    for (const secretName of ['REDIS_PASSWORD', 'NATS_TOKEN', 'TYPESENSE_API_KEY']) {
+      assert.equal(exampleNames.includes(secretName), false);
+    }
+
+    const rootManifest = JSON.parse(await readFile(join(destination, 'package.json'), 'utf8'));
+    assert.equal(rootManifest.scripts['local:secrets'], 'node scripts/init-local-secrets.mjs');
+    const generatedReadme = await readFile(join(destination, 'README.md'), 'utf8');
+    const localReadme = await readFile(join(destination, 'infra/local/README.md'), 'utf8');
+    assert.match(generatedReadme, /run local:secrets/);
+    assert.match(localReadme, /run local:secrets/);
+    const initializer = await readFile(join(destination, 'scripts/init-local-secrets.mjs'), 'utf8');
+    assert.match(initializer, /randomBytes\(32\)\.toString\('base64url'\)/);
+    assert.match(initializer, /open\(path, 'wx', 0o600\)/);
+    assert.match(initializer, /metadata\.isSymbolicLink\(\)/);
+    assert.match(
+      initializer,
+      /console\.log\(`Local secret files ready: \$\{created} created, \$\{kept} kept\.`\)/
+    );
+    await runCommand(process.execPath, ['scripts/init-local-secrets.mjs'], { cwd: destination });
+    assert.equal((await stat(join(destination, '.monox/secrets'))).mode & 0o777, 0o700);
+    const firstSecretValues = new Map();
+    for (const fileName of ['redis-password', 'nats-token', 'typesense-api-key']) {
+      const path = join(destination, '.monox/secrets', fileName);
+      const value = await readFile(path, 'utf8');
+      assert.match(value, /^[A-Za-z0-9_-]{43}\n$/);
+      assert.equal((await stat(path)).mode & 0o777, 0o600);
+      firstSecretValues.set(fileName, value);
+    }
+    await runCommand(process.execPath, ['scripts/init-local-secrets.mjs'], { cwd: destination });
+    for (const [fileName, value] of firstSecretValues) {
+      assert.equal(await readFile(join(destination, '.monox/secrets', fileName), 'utf8'), value);
+    }
+    await chmod(join(destination, '.monox/secrets'), 0o755);
+    await runCommand(process.execPath, ['scripts/init-local-secrets.mjs'], { cwd: destination });
+    assert.equal((await stat(join(destination, '.monox/secrets'))).mode & 0o777, 0o700);
+    const natsSecret = join(destination, '.monox/secrets/nats-token');
+    await chmod(natsSecret, 0o644);
+    await assert.rejects(
+      runCommand(process.execPath, ['scripts/init-local-secrets.mjs'], { cwd: destination }),
+      /exit code 1/
+    );
+    await chmod(natsSecret, 0o600);
+    const typesenseSecret = join(destination, '.monox/secrets/typesense-api-key');
+    await rm(typesenseSecret);
+    await symlink('redis-password', typesenseSecret);
+    await assert.rejects(
+      runCommand(process.execPath, ['scripts/init-local-secrets.mjs'], { cwd: destination }),
+      /exit code 1/
+    );
+
+    const gitignore = await readFile(join(destination, '.gitignore'), 'utf8');
+    const dockerignore = await readFile(join(destination, '.dockerignore'), 'utf8');
+    assert.match(gitignore, /^\.monox\/$/m);
+    assert.match(dockerignore, /^\.monox$/m);
+
+    const redisStart = await readFile(join(destination, 'infra/docker/redis-start.sh'), 'utf8');
+    const redisHealthcheck = await readFile(join(destination, 'infra/docker/redis-healthcheck.sh'), 'utf8');
+    const natsStart = await readFile(join(destination, 'infra/docker/nats-start.sh'), 'utf8');
+    const typesenseStart = await readFile(join(destination, 'infra/docker/typesense-start.sh'), 'utf8');
+    assert.match(redisStart, /exec redis-server "\$config_file"/);
+    assert.match(redisHealthcheck, /redis-cli --askpass ping < "\$secret_file"/);
+    assert.match(natsStart, /store_dir: \\"\/data\\"/);
+    assert.match(natsStart, /tr -d "\\n" < "\$secret_file"/);
+    assert.match(natsStart, /exec \/usr\/local\/bin\/nats-server --config "\$config_file"/);
+    assert.match(typesenseStart, /exec \/opt\/typesense-server --config "\$config_file"/);
+    for (const script of [redisStart, redisHealthcheck, natsStart, typesenseStart]) {
+      assert.doesNotMatch(script, /\$\{(?:REDIS_PASSWORD|NATS_TOKEN|TYPESENSE_API_KEY)/);
+    }
 
     const collector = await readFile(join(destination, 'infra/docker/otel-collector.yaml'), 'utf8');
     assert.match(collector, /otlp\/tempo:/);
@@ -489,12 +675,91 @@ test('pins polyglot build images and generates executable root bootstrap command
     const phpDockerfile = await readFile(join(destination, 'infra/docker/backend.Dockerfile'), 'utf8');
     assert.match(phpDockerfile, /RUN test -f composer\.lock/);
     assert.match(phpDockerfile, /composer install .*--no-scripts/);
+    assert.match(phpDockerfile, /RUN php artisan package:discover --ansi/);
+    assert.match(phpDockerfile, /VIEW_COMPILED_PATH=\/tmp/);
     const composerManifest = JSON.parse(
       await readFile(join(destination, 'apps/backend/composer.json'), 'utf8')
     );
     assert.equal(composerManifest.description, 'MonoX generated php-laravel-api workspace.');
     assert.equal(composerManifest.type, 'project');
     assert.equal(composerManifest.license, 'proprietary');
+    assert.equal(composerManifest.require['laravel/framework'], '^12.0');
+    assert.equal(composerManifest.autoload['psr-4']['App\\'], 'app/');
+    assert.deepEqual(composerManifest.scripts['post-autoload-dump'], [
+      '@php scripts/bootstrap-environment.php',
+      'Illuminate\\Foundation\\ComposerScripts::postAutoloadDump',
+      '@php artisan package:discover --ansi',
+    ]);
+    assert.equal(composerManifest.config.lock, true);
+
+    const laravelManifest = JSON.parse(
+      await readFile(join(destination, 'apps/backend/package.json'), 'utf8')
+    );
+    assert.equal(laravelManifest.scripts.start, 'php artisan serve --host=0.0.0.0 --port=8080');
+    assert.deepEqual(laravelManifest.deployment.runtime.command, [
+      'php',
+      'artisan',
+      'serve',
+      '--host=0.0.0.0',
+      '--port=8080',
+    ]);
+    assert.deepEqual(laravelManifest.deployment.env.secretRefs, [
+      { name: 'laravel-app-key', target: 'APP_KEY' },
+    ]);
+    assert.equal(laravelManifest.deployment.env.values.VIEW_COMPILED_PATH, '/tmp');
+
+    for (const path of [
+      'artisan',
+      'app/Providers/AppServiceProvider.php',
+      'app/Support/ProjectInfo.php',
+      'bootstrap/app.php',
+      'bootstrap/providers.php',
+      'config/app.php',
+      'config/logging.php',
+      'config/view.php',
+      'public/index.php',
+      'routes/api.php',
+      'routes/console.php',
+      'scripts/bootstrap-environment.php',
+      'tests/smoke.php',
+    ]) {
+      assert.equal((await stat(join(destination, 'apps/backend', path))).isFile(), true, path);
+    }
+    const laravelBootstrap = await readFile(join(destination, 'apps/backend/bootstrap/app.php'), 'utf8');
+    assert.match(laravelBootstrap, /Application::configure/);
+    assert.doesNotMatch(laravelBootstrap, /health:/);
+    assert.match(laravelBootstrap, /apiPrefix: ''/);
+    const laravelRoutes = await readFile(join(destination, 'apps/backend/routes/api.php'), 'utf8');
+    assert.match(laravelRoutes, /Route::get\('\/health'/);
+    assert.match(laravelRoutes, /'status' => 'ok'/);
+    const laravelFrontController = await readFile(join(destination, 'apps/backend/public/index.php'), 'utf8');
+    assert.match(laravelFrontController, /handleRequest\(Request::capture\(\)\)/);
+    const laravelEnvironment = await readFile(join(destination, 'apps/backend/.env.example'), 'utf8');
+    assert.match(laravelEnvironment, /^APP_KEY=$/m);
+    assert.doesNotMatch(laravelEnvironment, /^APP_KEY=.+$/m);
+    assert.match(laravelEnvironment, /^VIEW_COMPILED_PATH=\/tmp$/m);
+    const laravelEnvironmentBootstrap = await readFile(
+      join(destination, 'apps/backend/scripts/bootstrap-environment.php'),
+      'utf8'
+    );
+    assert.match(laravelEnvironmentBootstrap, /@lstat\(\$environment\)/);
+    assert.match(laravelEnvironmentBootstrap, /fopen\(\$path, 'xb'\)/);
+    assert.match(laravelEnvironmentBootstrap, /umask\(0077\)/);
+    assert.match(laravelEnvironmentBootstrap, /@rename\(\$temporary, \$environment\)/);
+    assert.doesNotMatch(laravelEnvironmentBootstrap, /\bcopy\(/);
+    assert.doesNotMatch(laravelEnvironmentBootstrap, /file_put_contents\(/);
+    assert.doesNotMatch(laravelEnvironmentBootstrap, /chmod\(\$environment/);
+    const dockerIgnore = await readFile(join(destination, '.dockerignore'), 'utf8');
+    assert.match(dockerIgnore, /^\.env\*$/m);
+    assert.match(dockerIgnore, /^\*\*\/\.env\*$/m);
+    assert.match(dockerIgnore, /^\*\*\/\.venv$/m);
+    assert.match(dockerIgnore, /^\*\*\/vendor$/m);
+    const localCompose = await readFile(join(destination, 'infra/local/docker-compose.yml'), 'utf8');
+    assert.match(localCompose, /env_file: \[\.\.\/\.\.\/apps\/backend\/\.env\]/);
+    assert.doesNotMatch(localCompose, /APP_KEY:/);
+    const localDockerReadme = await readFile(join(destination, 'infra/local/README.md'), 'utf8');
+    assert.match(localDockerReadme, /npm@12\.0\.1 run bootstrap:toolchains.*docker compose/s);
+    await assert.rejects(stat(join(destination, 'apps/backend/src/ProjectInfo.php')), { code: 'ENOENT' });
 
     const goApiDockerfile = await readFile(join(destination, 'infra/docker/gateway.Dockerfile'), 'utf8');
     assert.match(goApiDockerfile, /RUN test -f go\.sum/);

@@ -32,16 +32,17 @@ const composeServices = Object.freeze({
 `,
   redis: `  redis:
     image: redis:8.4.0-alpine@sha256:4eec4565e45aa0b3966554c866bc73211e281b0b3d89fe9a33c982e6faca809d
-    command: [redis-server, --appendonly, "yes", --requirepass, "\${REDIS_PASSWORD:?Set REDIS_PASSWORD}"]
+    entrypoint: [/bin/sh, /opt/monox/redis-start.sh]
     ports: ["127.0.0.1:6379:6379"]
-    volumes: [redis-data:/data]
+    volumes: [../docker/redis-start.sh:/opt/monox/redis-start.sh:ro, ../docker/redis-healthcheck.sh:/opt/monox/redis-healthcheck.sh:ro, ../docker/validate-secret.sh:/opt/monox/validate-secret.sh:ro, redis-data:/data]
+    secrets: [redis_password]
     healthcheck:
-      test: [CMD-SHELL, "redis-cli -a '$$REDIS_PASSWORD' ping | grep PONG"]
+      test: [CMD, /bin/sh, /opt/monox/redis-healthcheck.sh]
       interval: 10s
       timeout: 5s
       retries: 10
-    environment:
-      REDIS_PASSWORD: \${REDIS_PASSWORD:?Set REDIS_PASSWORD}
+    read_only: true
+    tmpfs: [/tmp]
     security_opt: [no-new-privileges:true]
 `,
   rabbitmq: `  rabbitmq:
@@ -60,9 +61,12 @@ const composeServices = Object.freeze({
 `,
   nats: `  nats:
     image: nats:2.12.2-alpine@sha256:2d5fce3229ae5741f4ef9225aff95dc4dc036455931eaf77a3eec33fddaa192d
-    command: [--jetstream, --store_dir=/data, --auth, "\${NATS_TOKEN:?Set NATS_TOKEN}"]
+    entrypoint: [/bin/sh, /opt/monox/nats-start.sh]
     ports: ["127.0.0.1:4222:4222"]
-    volumes: [nats-data:/data]
+    volumes: [../docker/nats-start.sh:/opt/monox/nats-start.sh:ro, ../docker/validate-secret.sh:/opt/monox/validate-secret.sh:ro, nats-data:/data]
+    secrets: [nats_token]
+    read_only: true
+    tmpfs: [/tmp]
     security_opt: [no-new-privileges:true]
 `,
   redpanda: `  redpanda:
@@ -118,9 +122,12 @@ const composeServices = Object.freeze({
 `,
   typesense: `  typesense:
     image: typesense/typesense:29.0@sha256:316b7e71c21f7e5e5caa8daa150e1b3f2be8c876081ee1f77bc2d92cd7f137d0
-    command: [--data-dir, /data, --api-key, "\${TYPESENSE_API_KEY:?Set TYPESENSE_API_KEY}"]
+    entrypoint: [/bin/sh, /opt/monox/typesense-start.sh]
     ports: ["127.0.0.1:8108:8108"]
-    volumes: [typesense-data:/data]
+    volumes: [../docker/typesense-start.sh:/opt/monox/typesense-start.sh:ro, ../docker/validate-secret.sh:/opt/monox/validate-secret.sh:ro, typesense-data:/data]
+    secrets: [typesense_api_key]
+    read_only: true
+    tmpfs: [/tmp]
     security_opt: [no-new-privileges:true]
 `,
   opensearch: `  opensearch:
@@ -248,19 +255,55 @@ const volumeByAddon = Object.freeze({
 const requiredEnvironment = Object.freeze({
   postgresql: ['POSTGRES_DB', 'POSTGRES_USER', 'POSTGRES_PASSWORD'],
   mongodb: ['MONGODB_ROOT_USERNAME', 'MONGODB_ROOT_PASSWORD'],
-  redis: ['REDIS_PASSWORD'],
   rabbitmq: ['RABBITMQ_USERNAME', 'RABBITMQ_PASSWORD'],
-  nats: ['NATS_TOKEN'],
   temporal: ['POSTGRES_DB', 'POSTGRES_USER', 'POSTGRES_PASSWORD'],
   qdrant: ['QDRANT_API_KEY'],
-  typesense: ['TYPESENSE_API_KEY'],
   opensearch: ['OPENSEARCH_INITIAL_ADMIN_PASSWORD'],
   minio: ['MINIO_ROOT_USER', 'MINIO_ROOT_PASSWORD'],
   keycloak: ['KEYCLOAK_ADMIN_USERNAME', 'KEYCLOAK_ADMIN_PASSWORD'],
   grafana: ['GRAFANA_ADMIN_USER', 'GRAFANA_ADMIN_PASSWORD'],
 });
 
+const localSecretByAddon = Object.freeze({
+  redis: Object.freeze({ composeName: 'redis_password', fileName: 'redis-password' }),
+  nats: Object.freeze({ composeName: 'nats_token', fileName: 'nats-token' }),
+  typesense: Object.freeze({ composeName: 'typesense_api_key', fileName: 'typesense-api-key' }),
+});
+
+const validateSecretScript = `#!/bin/sh
+
+validate_secret() {
+  secret_file="$1"
+  if [ ! -s "$secret_file" ] || [ "$(awk 'END { print NR }' "$secret_file")" -ne 1 ] || ! grep -Eq '^[A-Za-z0-9_-]+$' "$secret_file"; then
+    echo "MonoX secret file must contain exactly one base64url line." >&2
+    return 1
+  fi
+  secret_characters="$(tr -d '\n' < "$secret_file" | wc -c | tr -d ' ')"
+  if [ "$secret_characters" -lt 32 ] || [ "$secret_characters" -gt 256 ]; then
+    echo "MonoX secret must contain 32 to 256 base64url characters." >&2
+    return 1
+  fi
+}
+`;
+
 const supportFiles = Object.freeze({
+  redis: {
+    'infra/docker/redis-start.sh':
+      '#!/bin/sh\nset -eu\n\nsecret_file=/run/secrets/redis_password\nconfig_file=/tmp/monox-redis.conf\n. /opt/monox/validate-secret.sh\nvalidate_secret "$secret_file"\numask 077\n{\n  printf "appendonly yes\\n"\n  sed "s/^/requirepass /" "$secret_file"\n} > "$config_file"\nexec redis-server "$config_file"\n',
+    'infra/docker/redis-healthcheck.sh':
+      '#!/bin/sh\nset -eu\n\nsecret_file=/run/secrets/redis_password\n. /opt/monox/validate-secret.sh\nvalidate_secret "$secret_file"\nredis-cli --askpass ping < "$secret_file" | grep -qx PONG\n',
+    'infra/docker/validate-secret.sh': validateSecretScript,
+  },
+  nats: {
+    'infra/docker/nats-start.sh':
+      '#!/bin/sh\nset -eu\n\nsecret_file=/run/secrets/nats_token\nconfig_file=/tmp/monox-nats.conf\n. /opt/monox/validate-secret.sh\nvalidate_secret "$secret_file"\numask 077\n{\n  printf "jetstream {\\n  store_dir: \\\"/data\\\"\\n}\\nauthorization {\\n  token: \\\""\n  tr -d "\\n" < "$secret_file"\n  printf "\\\"\\n}\\n"\n} > "$config_file"\nexec /usr/local/bin/nats-server --config "$config_file"\n',
+    'infra/docker/validate-secret.sh': validateSecretScript,
+  },
+  typesense: {
+    'infra/docker/typesense-start.sh':
+      '#!/bin/sh\nset -eu\n\nsecret_file=/run/secrets/typesense_api_key\nconfig_file=/tmp/monox-typesense.ini\n. /opt/monox/validate-secret.sh\nvalidate_secret "$secret_file"\numask 077\n{\n  printf "[server]\\ndata-dir = /data\\napi-key = "\n  cat "$secret_file"\n} > "$config_file"\nexec /opt/typesense-server --config "$config_file"\n',
+    'infra/docker/validate-secret.sh': validateSecretScript,
+  },
   'otel-collector': {
     'infra/docker/otel-collector.yaml':
       'receivers:\n  otlp:\n    protocols:\n      grpc:\n        endpoint: 0.0.0.0:4317\n      http:\n        endpoint: 0.0.0.0:4318\nexporters:\n  debug: {}\n  otlp/tempo:\n    endpoint: tempo:4317\n    tls:\n      insecure: true\n  otlphttp/loki:\n    endpoint: http://loki:3100/otlp\n  prometheus:\n    endpoint: 0.0.0.0:8889\nservice:\n  telemetry:\n    logs:\n      level: info\n  pipelines:\n    traces:\n      receivers: [otlp]\n      exporters: [otlp/tempo, debug]\n    metrics:\n      receivers: [otlp]\n      exporters: [prometheus, debug]\n    logs:\n      receivers: [otlp]\n      exporters: [otlphttp/loki, debug]\n',
@@ -316,6 +359,13 @@ export function validateAddonsForEnvironment(addonIds, environment) {
   }
 }
 
+export function localSecretFilesForAddons(addonIds) {
+  return addonIds
+    .map((id) => localSecretByAddon[id])
+    .filter(Boolean)
+    .sort((left, right) => left.composeName.localeCompare(right.composeName));
+}
+
 export function renderAddonFiles(addonIds) {
   const files = new Map();
   const composeIds = addonIds.filter((id) => ADDON_RECIPES[id].compose);
@@ -332,13 +382,20 @@ export function renderAddonFiles(addonIds) {
       .filter(Boolean)
       .map((name) => `  ${name}: {}`)
       .join('\n');
+    const localSecrets = localSecretFilesForAddons(composeIds);
+    const secrets = localSecrets
+      .map(({ composeName, fileName }) => `  ${composeName}:\n    file: ../../.monox/secrets/${fileName}`)
+      .join('\n');
     files.set(
       'infra/docker/addons.compose.yaml',
-      `services:\n${services}${volumes ? `volumes:\n${volumes}\n` : ''}`
+      `services:\n${services}${volumes ? `volumes:\n${volumes}\n` : ''}${secrets ? `secrets:\n${secrets}\n` : ''}`
     );
 
     const envNames = [...new Set(composeIds.flatMap((id) => requiredEnvironment[id] ?? []))].sort();
     if (envNames.length > 0) files.set('.env.example', `${envNames.map((name) => `${name}=`).join('\n')}\n`);
+    if (localSecrets.length > 0) {
+      files.set('scripts/init-local-secrets.mjs', localSecretsInitializer(localSecrets));
+    }
     for (const id of composeIds) {
       for (const [path, contents] of Object.entries(supportFiles[id] ?? {})) files.set(path, contents);
     }
@@ -370,5 +427,11 @@ export function renderAddonFiles(addonIds) {
 }
 
 function addonReadme(addonIds) {
-  return `# Generated add-ons\n\nSelected recipes: ${addonIds.map((id) => `\`${id}\``).join(', ')}.\n\nCompose ports bind to loopback. Required values are listed with empty placeholders in \`.env.example\`; copy that file to the ignored \`.env\` and provide values before startup. No production credential belongs in either file.\n\nStateful Kubernetes add-ons are opt-in. Prefer a managed service in production and review storage, backups, authentication, network policy and resource limits before applying any rendered chart.\n`;
+  const hasLocalSecrets = localSecretFilesForAddons(addonIds).length > 0;
+  return `# Generated add-ons\n\nSelected recipes: ${addonIds.map((id) => `\`${id}\``).join(', ')}.\n\nCompose ports bind to loopback. Required non-file values are listed with empty placeholders in \`.env.example\`; copy that file to the ignored \`.env\` and provide values before startup. No production credential belongs in either file.${hasLocalSecrets ? ' Redis, NATS and Typesense credentials are mounted from ignored files under `.monox/secrets`; run the root `local:secrets` script before the first Compose start. Their values are not placed in the container command or Compose environment.' : ''}\n\nStateful Kubernetes add-ons are opt-in. Prefer a managed service in production and review storage, backups, authentication, network policy and resource limits before applying any rendered chart.\n`;
+}
+
+function localSecretsInitializer(localSecrets) {
+  const fileNames = localSecrets.map(({ fileName }) => fileName);
+  return `import { randomBytes } from 'node:crypto';\nimport { chmod, lstat, mkdir, open, readFile } from 'node:fs/promises';\n\nconst root = new URL('../.monox/', import.meta.url);\nconst directory = new URL('secrets/', root);\nconst fileNames = Object.freeze(${JSON.stringify(fileNames)});\nfor (const path of [root, directory]) {\n  await mkdir(path, { recursive: true, mode: 0o700 });\n  const metadata = await lstat(path);\n  if (!metadata.isDirectory() || metadata.isSymbolicLink()) {\n    throw new Error('Local secret directory must be a real directory, not a symlink.');\n  }\n  await chmod(path, 0o700);\n}\nlet created = 0;\nlet kept = 0;\nfor (const fileName of fileNames) {\n  const path = new URL(fileName, directory);\n  let handle;\n  try {\n    handle = await open(path, 'wx', 0o600);\n  } catch (error) {\n    if (error?.code !== 'EEXIST') throw error;\n    const metadata = await lstat(path);\n    const value = metadata.isFile() && !metadata.isSymbolicLink() ? await readFile(path, 'utf8') : '';\n    if ((metadata.mode & 0o777) !== 0o600 || !/^[A-Za-z0-9_-]{32,256}\\n?$/.test(value)) {\n      throw new Error(\`Unsafe existing local secret file: \${fileName}.\`);\n    }\n    kept += 1;\n    continue;\n  }\n  try {\n    await handle.writeFile(\`\${randomBytes(32).toString('base64url')}\\n\`, 'utf8');\n    await handle.chmod(0o600);\n    created += 1;\n  } finally {\n    await handle.close();\n  }\n}\nconsole.log(\`Local secret files ready: \${created} created, \${kept} kept.\`);\n`;
 }

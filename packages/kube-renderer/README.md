@@ -21,6 +21,10 @@ ServiceAccount, disables token automount, runs non-root with a read-only root fi
 capabilities and uses the runtime-default seccomp profile. Namespace output enforces the restricted Pod
 Security Standard.
 
+`runtime.workingDirectory` remains portable across delivery targets. A relative workspace path leaves the
+container image's declared `WORKDIR` unchanged. Kubernetes `workingDir` is emitted only when the contract
+supplies an explicit absolute container path.
+
 ## CLI
 
 From the repository root:

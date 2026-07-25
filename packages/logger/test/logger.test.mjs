@@ -41,6 +41,47 @@ test('redacts known credential values even under neutral keys', () => {
   assert.deepEqual(redact({ header: 'Bearer unsafe' }), { header: '[REDACTED]' });
 });
 
+test('redacts URI userinfo and embedded authorization material without hiding ordinary URLs', () => {
+  const connectionUri = 'postgresql://admin:supersensitive@db/app';
+  const input = {
+    databaseUrl: connectionUri,
+    message: `connection failed for ${connectionUri}`,
+    response: 'upstream returned Authorization: Bearer definitely-secret',
+    basic: 'request used Basic dXNlcjpwYXNz',
+    passwordUrl: 'postgresql://db/app?password=definitely-secret',
+    signedUrl: 'https://example.com/object#signature=abcdef',
+    publicUrl: 'https://example.com/path?q=public',
+    referenceUrl: 'https://example.com/callback?tokenRef=oauth-token&secretRef=vault-secret',
+  };
+
+  const output = redact(input);
+  assert.deepEqual(output, {
+    databaseUrl: '[REDACTED]',
+    message: '[REDACTED]',
+    response: '[REDACTED]',
+    basic: '[REDACTED]',
+    passwordUrl: '[REDACTED]',
+    signedUrl: '[REDACTED]',
+    publicUrl: 'https://example.com/path?q=public',
+    referenceUrl: 'https://example.com/callback?tokenRef=oauth-token&secretRef=vault-secret',
+  });
+  assert.equal(JSON.stringify(output).includes('supersensitive'), false);
+});
+
+test('redacts credentials embedded in Error messages and stacks before logging', () => {
+  const connectionUri = 'postgresql://db/app?password=supersensitive';
+  const records = [];
+  const logger = createLogger({ sink: (record) => records.push(record) });
+  const error = new Error(`connection failed for ${connectionUri}`);
+
+  logger.error('database request failed', error);
+
+  assert.equal(records.length, 1);
+  assert.equal(records[0].error.message, '[REDACTED]');
+  assert.equal(records[0].error.stack, '[REDACTED]');
+  assert.equal(JSON.stringify(records).includes('supersensitive'), false);
+});
+
 test('emits immutable structured child context and respects level', () => {
   const records = [];
   const logger = createLogger({

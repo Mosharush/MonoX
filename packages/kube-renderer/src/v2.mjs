@@ -93,11 +93,11 @@ function validateWorkerLifecycle(deployment) {
 
 function labels(config) {
   return {
+    ...stringMap(config.deployment.labels, '$.labels'),
     'app.kubernetes.io/name': config.id,
     'app.kubernetes.io/instance': config.id,
     'app.kubernetes.io/managed-by': 'monox',
     'monox.dev/environment': config.environment,
-    ...stringMap(config.deployment.labels, '$.labels'),
   };
 }
 
@@ -357,6 +357,10 @@ function serviceAccountResource(config) {
   };
 }
 
+function containerWorkingDirectory(value) {
+  return typeof value === 'string' && value.startsWith('/') ? value : undefined;
+}
+
 function identityAnnotations(config) {
   const identity = config.deployment.identity ?? {};
   if (config.target.provider === 'gcp' && identity.workloadIdentity)
@@ -376,7 +380,7 @@ function podSpec(config, storageConfig) {
     image: image(config),
     imagePullPolicy: 'IfNotPresent',
     command: runtime.command,
-    workingDir: runtime.workingDirectory,
+    workingDir: containerWorkingDirectory(runtime.workingDirectory),
     ports: configuredPorts.length
       ? configuredPorts.map((port) => ({
           name: port.name,
@@ -610,7 +614,15 @@ function pdbResource(config) {
 }
 
 function networkPolicyResource(config, networkEnabled) {
-  const ingressFrom = [{ namespaceLabels: { 'monox.dev/gateway-access': 'true' } }];
+  const ingressFrom = [
+    { namespaceLabels: { 'monox.dev/gateway-access': 'true' } },
+    {
+      podLabels: {
+        'app.kubernetes.io/managed-by': 'monox',
+        'monox.dev/environment': config.environment,
+      },
+    },
+  ];
   const ingress = networkEnabled
     ? [
         compact({

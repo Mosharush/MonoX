@@ -18,7 +18,8 @@ function id(value, fallback = 'app') {
     .toLowerCase()
     .replace(/^@[^/]+\//, '')
     .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
+    .replace(/^-+/, '')
+    .replace(/-+$/, '')
     .slice(0, 63);
   return /^[a-z]/.test(normalized) ? normalized : `app-${normalized}`.slice(0, 63);
 }

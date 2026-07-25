@@ -53,6 +53,64 @@ test('redacts credential fields and values but preserves reference names', () =>
   );
 });
 
+test('redacts URI userinfo and embedded authorization credentials under neutral keys', () => {
+  const connectionUri = 'postgresql://admin:supersensitive@db/app';
+  const redacted = redactSecrets({
+    databaseUrl: connectionUri,
+    error: `connection failed for ${connectionUri}`,
+    response: 'upstream returned Authorization: Bearer definitely-secret',
+    basicChallenge: 'request used Basic dXNlcjpwYXNz',
+    tokenUrl: 'https://example.com/api?token=definitely-secret',
+    signedUrl: 'https://example.com/object#signature=abcdef',
+    publicUrl: 'https://example.com/path?q=public',
+    referenceUrl: 'https://example.com/callback?tokenRef=oauth-token&secretRef=vault-secret',
+  });
+
+  assert.deepEqual(redacted, {
+    databaseUrl: '[REDACTED]',
+    error: '[REDACTED]',
+    response: '[REDACTED]',
+    basicChallenge: '[REDACTED]',
+    tokenUrl: '[REDACTED]',
+    signedUrl: '[REDACTED]',
+    publicUrl: 'https://example.com/path?q=public',
+    referenceUrl: 'https://example.com/callback?tokenRef=oauth-token&secretRef=vault-secret',
+  });
+  assert.equal(JSON.stringify(redacted).includes('supersensitive'), false);
+});
+
+test('plans and receipts do not preserve credential material in neutral fields', () => {
+  const connectionUri = 'postgresql://admin:supersensitive@db/app';
+  const adapter = new NoopCloudapter();
+  const plan = createPlan({
+    adapter,
+    environment: 'preview',
+    target: { id: 'local', endpoint: 'https://example.com' },
+    sourceDigest: 'sha256:source',
+    targetStateDigest: 'sha256:state',
+    actions: [
+      { operation: 'connect', diagnostic: `failed to connect to ${connectionUri}` },
+      { operation: 'download', source: 'https://example.com/object?access_token=definitely-secret' },
+    ],
+    metadata: { databaseUrl: connectionUri },
+    createdAt: connectionUri,
+  });
+  const receipt = createReceipt({
+    plan,
+    result: { error: `Authorization: Basic dXNlcjpwYXNz while connecting to ${connectionUri}` },
+    createdAt: connectionUri,
+  });
+
+  assert.equal(plan.actions[0].diagnostic, '[REDACTED]');
+  assert.equal(plan.actions[1].source, '[REDACTED]');
+  assert.equal(plan.metadata.databaseUrl, '[REDACTED]');
+  assert.equal(plan.createdAt, '[REDACTED]');
+  assert.equal(receipt.result.error, '[REDACTED]');
+  assert.equal(receipt.createdAt, '[REDACTED]');
+  assert.equal(JSON.stringify({ plan, receipt }).includes('supersensitive'), false);
+  assert.equal(plan.target.endpoint, 'https://example.com');
+});
+
 test('creates deterministic, deeply immutable plans and receipts', () => {
   const adapter = new NoopCloudapter();
   const input = {

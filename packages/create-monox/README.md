@@ -88,6 +88,11 @@ this alpha.
 Each recipe writes its own install, build, test and start scripts when those operations apply. Polyglot
 workspaces require their named toolchain on the developer machine or in CI.
 
+`php-laravel-api` is a minimal Laravel 12 application, not a standalone PHP front controller. It includes
+Laravel's `artisan` and `bootstrap/app.php` lifecycle, API and health routes, provider registration,
+application configuration and an ignored local environment initializer. Production delivery resolves `APP_KEY`
+through the workspace deployment contract's external secret reference.
+
 Run the generated `bootstrap:toolchains` script before building polyglot containers. It creates the selected
 workspace's `uv.lock`, `composer.lock` or `go.sum`; PHP and Go Dockerfiles then consume that committed state
 without open-ended dependency resolution during the image build.
@@ -103,8 +108,16 @@ without open-ended dependency resolution during the image build.
   NVIDIA GPU Operator.
 
 Bundled add-ons are enabled only for development and preview. Staging and production require an explicit
-managed or external add-on decision. Compose ports bind to loopback. Authentication-capable services require
-values through `${VARIABLE:?Set VARIABLE}` and generated `.env.example` files contain blank placeholders only.
+managed or external add-on decision. Compose ports bind to loopback. Most authentication-capable services
+require values through `${VARIABLE:?Set VARIABLE}`, and generated `.env.example` files contain blank
+placeholders only.
+
+Redis, NATS and Typesense use Compose file secrets instead. Run the generated `local:secrets` script once to
+create cryptographically random credentials under the ignored `.monox/secrets` directory. Existing files are
+never replaced. Their startup wrappers construct private runtime configuration files, and daemon arguments,
+healthcheck arguments and Compose environment entries contain file paths only, not secret values. The
+generated `.dockerignore` excludes the entire `.monox` directory from build contexts.
+
 Kubernetes add-on records are deliberately marked `unverified` until their OCI chart coordinates and digests
 pass the release verification pipeline; execution must fail closed while that marker remains.
 

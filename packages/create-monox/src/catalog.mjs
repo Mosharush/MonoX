@@ -52,6 +52,7 @@ export const WORKSPACE_RECIPES = Object.freeze({
     schedule: '0 * * * *',
   }),
   'react-vite-web': recipe({
+    version: '1.1.0',
     family: 'javascript',
     language: 'javascript',
     framework: 'react-vite',
@@ -59,6 +60,7 @@ export const WORKSPACE_RECIPES = Object.freeze({
     port: 4173,
   }),
   'vue-vite-web': recipe({
+    version: '1.1.0',
     family: 'javascript',
     language: 'javascript',
     framework: 'vue-vite',
@@ -87,6 +89,7 @@ export const WORKSPACE_RECIPES = Object.freeze({
     port: 3000,
   }),
   'angular-web': recipe({
+    version: '1.1.0',
     family: 'javascript',
     language: 'typescript',
     framework: 'angular',
@@ -123,6 +126,7 @@ export const WORKSPACE_RECIPES = Object.freeze({
   }),
   'python-library': recipe({ family: 'python', language: 'python', framework: 'python', kind: 'library' }),
   'php-laravel-api': recipe({
+    version: '1.1.0',
     family: 'php',
     language: 'php',
     framework: 'laravel',

@@ -22,8 +22,9 @@ spread, NetworkPolicy, HPA and ServiceMonitor resources. KEDA can replace HPA fo
 sources, and is required for scale to zero. KEDA and referenced authentication resources must already exist in
 the target cluster.
 
-The NetworkPolicy allows only the selected gateway to reach the application port. Egress is independently
-allowlisted for DNS, HTTPS and same-namespace pods. Tighten those switches for workloads with narrower needs.
+The NetworkPolicy allows the selected gateway and MonoX workloads from the same environment and namespace to
+reach application ports. Egress is independently allowlisted for DNS and same-namespace pods. Tighten those
+rules for workloads with narrower needs.
 
 Rendering does not deploy and does not contact a cluster. `@monox/cloudapter-kubernetes` also remains offline
 until a caller injects an approved cluster transport. It never selects a local kube context implicitly.
@@ -33,8 +34,8 @@ until a caller injects an approved cluster transport. It never selects a local k
 - Restricted Pod Security admission labels, non-root containers, read-only root filesystems and seccomp.
 - Dedicated ServiceAccounts with token automount disabled. AWS IRSA and GKE Workload Identity use annotations
   derived from reference-only identity fields.
-- Default-deny-friendly NetworkPolicies. Networked workloads accept traffic only from namespaces labelled
-  `monox.dev/gateway-access=true`.
+- Default-deny-friendly NetworkPolicies. Networked workloads accept traffic from namespaces labelled
+  `monox.dev/gateway-access=true` and same-namespace pods managed by MonoX for the selected environment.
 - Requests, limits, three probes, topology spread and a bounded autoscaler.
 - Long-running workers require an explicit drain hook and a termination grace period that covers the drain
   timeout. HPA and KEDA use scale-down stabilization.

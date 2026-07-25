@@ -30,16 +30,18 @@ environment.
   entitlement.
 - `alpha-acceptance.yml` verifies the seven synthetic migration goldens and generates one representative Node,
   Python, PHP and Go project. It installs each selected toolchain, verifies `monox.lock`, builds and tests the
-  workspaces, then starts the Node and Python APIs and probes their health endpoints. A separate job exercises
-  the built-in local Cloudapter through doctor, deploy, an explicit health probe, status and owned-service
-  destroy. This is representative coverage, not the complete catalog matrix.
+  workspaces, then starts the Node, Python and Laravel APIs and probes their health endpoints. A separate job
+  exercises the built-in local Cloudapter through doctor, deploy, an explicit health probe, status and
+  owned-service destroy. This is representative coverage, not the complete catalog matrix.
 - `catalog-matrix.yml` is scheduled weekly and can be started manually. It generates every one of the 24
   bundled workspace recipes in isolation, installs the selected toolchain, verifies the lock, runs tests and
   builds. It then runs the shared acceptance helper, which probes services, checks workers, waits for jobs and
   cron workloads, and marks libraries as not applicable.
 - `kubernetes-smoke.yml` builds the synthetic API image, renders the runtime fixture, applies it to a
-  disposable kind cluster, waits for rollout, checks workload policy, and probes the Service. kind, kubectl,
-  and the kind node image are pinned and verified. The workflow never contacts a production cluster.
+  disposable kind cluster, waits for rollout, checks the rendered security-context, probe, resource,
+  PodDisruptionBudget, and NetworkPolicy objects, and probes the Service. It does not claim dataplane-level
+  NetworkPolicy enforcement. kind, kubectl, and the kind node image are pinned and verified. The workflow
+  never contacts a production cluster.
 - `container-release.yml` is manual-only, accepts an explicit SemVer tag, publishes separate API and web
   images to GHCR, refuses to replace an existing release tag, and attaches BuildKit SBOM and provenance
   attestations. GitHub build provenance is also recorded for supported repositories.

@@ -13,7 +13,10 @@ const sensitiveValuePatterns = [
   /\bgithub_pat_[A-Za-z0-9_]{20,}\b/,
   /\bnpm_[A-Za-z0-9]{20,}\b/,
   /\b(?:glpat|sk)-[A-Za-z0-9_-]{20,}\b/,
-  /^Bearer\s+\S+$/i,
+  /\b(?:Basic|Bearer)[\t ]+[^\s,;"']+/i,
+  /\bauthorization[\t ]*(?::|=)[\t ]*(?:"[^"\r\n]+"|'[^'\r\n]+'|[^\s,;]+)/i,
+  /\b[a-z][a-z0-9+.-]*:\/\/[^\s/?#@]+@[^\s/?#]+/i,
+  /(?:^|[?&#;])(?:access[_-]?token|api[_-]?key|client[_-]?secret|credential|id[_-]?token|password|passwd|refresh[_-]?token|secret|signature|token|x-amz-(?:credential|signature)|x-goog-(?:credential|signature))=[^&#;\s]+/i,
 ];
 
 const directSecretWords = new Set([

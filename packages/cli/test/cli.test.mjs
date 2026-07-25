@@ -161,7 +161,7 @@ test('requires exact destructive confirmation and CI identity for production', a
     () =>
       run(
         ['deploy', '--env', 'production', '--all'],
-        { cwd: root, stdout: stdout.stream },
+        { cwd: root, stdout: stdout.stream, env: {} },
         noExternalExecution()
       ),
     /CI=true/

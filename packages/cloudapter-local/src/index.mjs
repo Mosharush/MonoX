@@ -48,7 +48,8 @@ function composeProjectName(context) {
     .toLowerCase()
     .replaceAll(/[^a-z0-9_-]/g, '-')
     .replaceAll(/-+/g, '-')
-    .replace(/^[-_]+|[-_]+$/g, '')
+    .replace(/^[-_]+/, '')
+    .replace(/[-_]+$/, '')
     .slice(0, 63);
   return value || 'monox-local';
 }

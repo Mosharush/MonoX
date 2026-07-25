@@ -12,7 +12,10 @@ const sensitiveValue = [
   /\bgithub_pat_[A-Za-z0-9_]{20,}\b/,
   /\bnpm_[A-Za-z0-9]{20,}\b/,
   /\b(?:glpat|sk)-[A-Za-z0-9_-]{20,}\b/,
-  /^Bearer\s+\S+$/i,
+  /\b(?:Basic|Bearer)[\t ]+[^\s,;"']+/i,
+  /\bauthorization[\t ]*(?::|=)[\t ]*(?:"[^"\r\n]+"|'[^'\r\n]+'|[^\s,;]+)/i,
+  /\b[a-z][a-z0-9+.-]*:\/\/[^\s/?#@]+@[^\s/?#]+/i,
+  /(?:^|[?&#;])(?:access[_-]?token|api[_-]?key|client[_-]?secret|credential|id[_-]?token|password|passwd|refresh[_-]?token|secret|signature|token|x-amz-(?:credential|signature)|x-goog-(?:credential|signature))=[^&#;\s]+/i,
 ];
 
 const directSecretWords = new Set([
@@ -110,6 +113,10 @@ function plainObject(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
+function containsSecretMaterial(value) {
+  return typeof value === 'string' && sensitiveValue.some((pattern) => pattern.test(value));
+}
+
 function jsonValue(value, path = '$') {
   if (value === null || ['string', 'boolean'].includes(typeof value)) return value;
   if (typeof value === 'number') {
@@ -138,7 +145,7 @@ export function redactSecrets(value, key = '') {
   if (key && isSecretLikeKey(key) && !isTokenAutomountPolicy(key, value)) return '[REDACTED]';
   if (value === null || typeof value === 'boolean' || typeof value === 'number') return value;
   if (typeof value === 'string') {
-    if (sensitiveValue.some((pattern) => pattern.test(value))) return '[REDACTED]';
+    if (containsSecretMaterial(value)) return '[REDACTED]';
     return value;
   }
   if (Array.isArray(value)) return value.map((item) => redactSecrets(item, key));
@@ -220,7 +227,7 @@ export function createPlan({
     schemaVersion: PLAN_SCHEMA_VERSION,
     kind: 'MonoXPlan',
     id: digest,
-    createdAt,
+    createdAt: redactSecrets(createdAt),
     ...content,
     digest,
   });
@@ -275,7 +282,7 @@ export function createReceipt({
     schemaVersion: RECEIPT_SCHEMA_VERSION,
     kind: 'MonoXReceipt',
     id: digest,
-    createdAt,
+    createdAt: redactSecrets(createdAt),
     ...content,
     digest,
   });

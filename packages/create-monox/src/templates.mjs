@@ -228,6 +228,10 @@ function renderJavaScript(add, selection, project, definition) {
       throw new Error(`No renderer exists for workspace template: ${selection.template}.`);
   }
 
+  if (['react-vite-web', 'vue-vite-web', 'angular-web'].includes(selection.template)) {
+    const outputDirectory = selection.template === 'angular-web' ? 'dist/browser' : 'dist';
+    add('scripts/serve-static.mjs', staticServer(outputDirectory, definition.port));
+  }
   add('package.json', json(manifest));
 }
 
@@ -289,28 +293,51 @@ function renderPhp(add, selection, project, definition) {
             test: 'php tests/smoke.php',
           }
         : {
-            bootstrap: 'composer install --no-interaction',
+            bootstrap: 'composer install --no-interaction --no-progress --prefer-dist',
             build: 'composer validate --strict',
-            start: 'php -S 0.0.0.0:8080 -t public',
+            start: 'php artisan serve --host=0.0.0.0 --port=8080',
             test: 'php tests/smoke.php',
           },
       ...(deployment ? { deployment } : {}),
     })
   );
-  add(
-    'composer.json',
-    json({
-      name: `${project.name}/${selection.name}`,
-      description: `MonoX generated ${selection.template} workspace.`,
-      type: library ? 'library' : 'project',
-      license: 'proprietary',
-      require: library ? { php: '^8.4' } : { php: '^8.4', 'laravel/framework': '^12.0' },
-      autoload: { 'psr-4': { [`${namespace}\\`]: 'src/' } },
-    })
-  );
-  add('src/ProjectInfo.php', phpClass(namespace, project.name));
-  add('tests/smoke.php', phpTest(namespace));
-  if (!library) add('public/index.php', phpApi(namespace));
+  if (library) {
+    add(
+      'composer.json',
+      json({
+        name: `${project.name}/${selection.name}`,
+        description: `MonoX generated ${selection.template} workspace.`,
+        type: 'library',
+        license: 'proprietary',
+        require: { php: '^8.4' },
+        autoload: { 'psr-4': { [`${namespace}\\`]: 'src/' } },
+      })
+    );
+    add('src/ProjectInfo.php', phpClass(namespace, project.name));
+    add('tests/smoke.php', phpTest(namespace));
+    return;
+  }
+
+  add('composer.json', json(laravelComposerManifest(project, selection)));
+  add('.env.example', laravelEnvironment(project.name));
+  add('artisan', laravelArtisan());
+  add('app/Providers/AppServiceProvider.php', laravelAppServiceProvider());
+  add('app/Support/ProjectInfo.php', phpClass('App\\Support', project.name));
+  add('bootstrap/app.php', laravelBootstrapApplication());
+  add('bootstrap/providers.php', laravelProviders());
+  add('bootstrap/cache/.gitignore', directoryKeepFile());
+  add('config/app.php', laravelAppConfig(project.name));
+  add('config/logging.php', laravelLoggingConfig());
+  add('config/view.php', laravelViewConfig());
+  add('public/index.php', laravelPublicIndex());
+  add('routes/api.php', laravelApiRoutes());
+  add('routes/console.php', laravelConsoleRoutes());
+  add('scripts/bootstrap-environment.php', laravelEnvironmentBootstrap());
+  add('storage/framework/cache/data/.gitignore', directoryKeepFile());
+  add('storage/framework/sessions/.gitignore', directoryKeepFile());
+  add('storage/framework/views/.gitignore', directoryKeepFile());
+  add('storage/logs/.gitignore', directoryKeepFile());
+  add('tests/smoke.php', laravelSmokeTest());
 }
 
 function renderGo(add, selection, project, definition) {
@@ -367,11 +394,16 @@ function deploymentFor(selection, definition) {
     },
     probes,
     env: {
-      values: isNetworked ? { PORT: String(definition.port) } : {},
+      values: {
+        ...(isNetworked ? { PORT: String(definition.port) } : {}),
+        ...(selection.template === 'php-laravel-api' ? { VIEW_COMPILED_PATH: '/tmp' } : {}),
+      },
       secretRefs:
         selection.template === 'python-django-api'
           ? [{ name: 'django-secret', target: 'DJANGO_SECRET_KEY' }]
-          : [],
+          : selection.template === 'php-laravel-api'
+            ? [{ name: 'laravel-app-key', target: 'APP_KEY' }]
+            : [],
     },
     resources: {
       requests: { cpu: '100m', memory: '128Mi' },
@@ -462,6 +494,7 @@ function runtimeCommand(selection, definition) {
     }
     return ['uv', 'run', 'python', '-m', `${moduleName}.worker`];
   }
+  if (template === 'php-laravel-api') return ['php', 'artisan', 'serve', '--host=0.0.0.0', '--port=8080'];
   if (definition.language === 'php') return ['php', '-S', '0.0.0.0:8080', '-t', 'public'];
   if (definition.language === 'go') return ['/app'];
   if (template === 'node-worker') return ['node', 'src/worker.mjs'];
@@ -469,10 +502,8 @@ function runtimeCommand(selection, definition) {
   if (template === 'next-web') return ['next', 'start'];
   if (template === 'nuxt-web') return ['node', '.output/server/index.mjs'];
   if (template === 'sveltekit-web') return ['node', 'build'];
-  if (['react-vite-web', 'vue-vite-web'].includes(template))
-    return ['npx', '--no-install', 'vite', 'preview', '--host', '0.0.0.0', '--port', '4173'];
-  if (template === 'angular-web')
-    return ['npx', '--no-install', 'ng', 'serve', '--host', '0.0.0.0', '--port', '4200'];
+  if (['react-vite-web', 'vue-vite-web', 'angular-web'].includes(template))
+    return ['node', 'scripts/serve-static.mjs'];
   return template === 'node-nest-api' ? ['node', 'dist/main.js'] : ['node', 'src/server.mjs'];
 }
 
@@ -493,7 +524,7 @@ function nodeManifest(base, deployment, dependencies = {}) {
 function staticJsManifest(base, deployment, { dependencies, devDependencies }) {
   return {
     ...base,
-    scripts: { dev: 'vite', build: 'vite build', start: 'vite preview --host 0.0.0.0', test: 'vite build' },
+    scripts: { dev: 'vite', build: 'vite build', start: 'node scripts/serve-static.mjs', test: 'vite build' },
     dependencies,
     devDependencies,
     deployment,
@@ -503,7 +534,7 @@ function staticJsManifest(base, deployment, { dependencies, devDependencies }) {
 function angularManifest(base, deployment) {
   return {
     ...base,
-    scripts: { dev: 'ng serve', build: 'ng build', start: 'ng serve --host 0.0.0.0', test: 'ng build' },
+    scripts: { dev: 'ng serve', build: 'ng build', start: 'node scripts/serve-static.mjs', test: 'ng build' },
     dependencies: {
       '@angular/common': '22.0.8',
       '@angular/compiler': '22.0.8',
@@ -537,6 +568,142 @@ const server = createServer((request, response) => {
   response.end(JSON.stringify({ error: 'not_found' }));
 });
 server.listen(port, '0.0.0.0', () => console.log(\`HTTP API listening on \${port}\`));
+`;
+}
+
+function staticServer(outputDirectory, port) {
+  return `import { createReadStream } from 'node:fs';
+import { realpath, stat } from 'node:fs/promises';
+import { createServer } from 'node:http';
+import { extname, join, resolve, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const defaultRoot = fileURLToPath(new URL('../${outputDirectory}/', import.meta.url));
+const contentTypes = Object.freeze({
+  '.css': 'text/css; charset=utf-8',
+  '.html': 'text/html; charset=utf-8',
+  '.ico': 'image/x-icon',
+  '.jpeg': 'image/jpeg',
+  '.jpg': 'image/jpeg',
+  '.js': 'text/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8',
+  '.png': 'image/png',
+  '.svg': 'image/svg+xml',
+  '.txt': 'text/plain; charset=utf-8',
+  '.wasm': 'application/wasm',
+  '.webp': 'image/webp',
+  '.woff2': 'font/woff2',
+  '.xml': 'application/xml; charset=utf-8',
+});
+const securityHeaders = Object.freeze({
+  'content-security-policy': "default-src 'self'; base-uri 'none'; frame-ancestors 'none'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'",
+  'cross-origin-opener-policy': 'same-origin',
+  'permissions-policy': 'camera=(), geolocation=(), microphone=()',
+  'referrer-policy': 'no-referrer',
+  'x-content-type-options': 'nosniff',
+  'x-frame-options': 'DENY',
+});
+
+function inside(root, candidate) {
+  return candidate === root || candidate.startsWith(root + sep);
+}
+
+async function existingPath(candidate) {
+  try {
+    return await realpath(candidate);
+  } catch (error) {
+    if (error?.code === 'ENOENT' || error?.code === 'ENOTDIR') return undefined;
+    throw error;
+  }
+}
+
+async function staticFile(root, requestPath) {
+  const candidate = resolve(root, requestPath);
+  if (!inside(root, candidate)) return undefined;
+  let canonical = await existingPath(candidate);
+  if (!canonical || !inside(root, canonical)) return undefined;
+  let metadata = await stat(canonical);
+  if (metadata.isDirectory()) {
+    canonical = await existingPath(join(canonical, 'index.html'));
+    if (!canonical || !inside(root, canonical)) return undefined;
+    metadata = await stat(canonical);
+  }
+  return metadata.isFile() ? canonical : undefined;
+}
+
+function requestPath(url) {
+  try {
+    const pathname = decodeURIComponent(new URL(url ?? '/', 'http://localhost').pathname);
+    const segments = pathname.split('/');
+    if (pathname.includes('\\0') || pathname.includes('\\\\') || segments.includes('..')) return undefined;
+    return pathname.replace(/^\\/+/, '');
+  } catch {
+    return undefined;
+  }
+}
+
+function textResponse(response, method, status, body, extraHeaders = {}) {
+  response.writeHead(status, {
+    ...securityHeaders,
+    'content-type': 'text/plain; charset=utf-8',
+    ...extraHeaders,
+  });
+  response.end(method === 'HEAD' ? undefined : body);
+}
+
+export async function createStaticServer({ root = defaultRoot } = {}) {
+  const canonicalRoot = await realpath(root);
+  const fallback = await staticFile(canonicalRoot, 'index.html');
+  if (!fallback) throw new Error('Static output is missing index.html. Run the workspace build first.');
+
+  return createServer(async (request, response) => {
+    const method = request.method ?? 'GET';
+    if (method !== 'GET' && method !== 'HEAD') {
+      textResponse(response, method, 405, 'Method not allowed', { allow: 'GET, HEAD' });
+      return;
+    }
+
+    const relative = requestPath(request.url);
+    if (relative === undefined) {
+      textResponse(response, method, 400, 'Bad request');
+      return;
+    }
+
+    try {
+      let file = await staticFile(canonicalRoot, relative);
+      if (!file && extname(relative) === '') file = fallback;
+      if (!file) {
+        textResponse(response, method, 404, 'Not found');
+        return;
+      }
+
+      const extension = extname(file).toLowerCase();
+      response.writeHead(200, {
+        ...securityHeaders,
+        'cache-control': extension === '.html' ? 'no-cache' : 'public, max-age=3600',
+        'content-type': contentTypes[extension] ?? 'application/octet-stream',
+      });
+      if (method === 'HEAD') {
+        response.end();
+        return;
+      }
+      const stream = createReadStream(file);
+      stream.once('error', () => response.destroy());
+      stream.pipe(response);
+    } catch {
+      textResponse(response, method, 500, 'Internal server error');
+    }
+  });
+}
+
+const isEntryPoint = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (isEntryPoint) {
+  const port = Number.parseInt(process.env.PORT ?? '${port}', 10);
+  if (!Number.isInteger(port) || port < 1 || port > 65_535) throw new Error('PORT must be from 1 to 65535.');
+  const server = await createStaticServer();
+  server.listen(port, '0.0.0.0', () => console.log('Static server listening on port ' + port));
+}
 `;
 }
 
@@ -754,8 +921,429 @@ function phpTest(namespace) {
   return `<?php\nrequire __DIR__ . '/../vendor/autoload.php';\nassert(${namespace}\\ProjectInfo::name() !== '');\n`;
 }
 
-function phpApi(namespace) {
-  return `<?php\ndeclare(strict_types=1);\nrequire __DIR__ . '/../vendor/autoload.php';\nuse Illuminate\\Http\\JsonResponse;\nuse Illuminate\\Http\\Request;\n\n$request = Request::capture();\n$response = $request->path() === 'health' ? new JsonResponse(['status' => 'ok']) : new JsonResponse(['error' => 'not_found'], 404);\n$response->send();\n`;
+function laravelComposerManifest(project, selection) {
+  return {
+    $schema: 'https://getcomposer.org/schema.json',
+    name: `${project.name}/${selection.name}`,
+    description: `MonoX generated ${selection.template} workspace.`,
+    type: 'project',
+    license: 'proprietary',
+    require: { php: '^8.4', 'laravel/framework': '^12.0' },
+    autoload: { 'psr-4': { 'App\\': 'app/' } },
+    scripts: {
+      'post-autoload-dump': [
+        '@php scripts/bootstrap-environment.php',
+        'Illuminate\\Foundation\\ComposerScripts::postAutoloadDump',
+        '@php artisan package:discover --ansi',
+      ],
+      'pre-package-uninstall': ['Illuminate\\Foundation\\ComposerScripts::prePackageUninstall'],
+    },
+    extra: { laravel: { 'dont-discover': [] } },
+    config: {
+      'optimize-autoloader': true,
+      'preferred-install': 'dist',
+      'sort-packages': true,
+      lock: true,
+      'allow-plugins': {},
+    },
+    'minimum-stability': 'stable',
+    'prefer-stable': true,
+  };
+}
+
+function laravelEnvironment(projectName) {
+  return `APP_NAME=${projectName}\nAPP_ENV=local\nAPP_KEY=\nAPP_DEBUG=false\nAPP_URL=http://localhost:8080\nLOG_CHANNEL=stderr\nLOG_LEVEL=debug\nVIEW_COMPILED_PATH=/tmp\n`;
+}
+
+function laravelArtisan() {
+  return `#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\\Foundation\\Application;
+use Symfony\\Component\\Console\\Input\\ArgvInput;
+
+define('LARAVEL_START', microtime(true));
+
+require __DIR__.'/vendor/autoload.php';
+
+/** @var Application $app */
+$app = require_once __DIR__.'/bootstrap/app.php';
+
+$status = $app->handleCommand(new ArgvInput());
+
+exit($status);
+`;
+}
+
+function laravelAppServiceProvider() {
+  return `<?php
+
+declare(strict_types=1);
+
+namespace App\\Providers;
+
+use Illuminate\\Support\\ServiceProvider;
+
+final class AppServiceProvider extends ServiceProvider
+{
+    public function register(): void
+    {
+    }
+
+    public function boot(): void
+    {
+    }
+}
+`;
+}
+
+function laravelBootstrapApplication() {
+  return `<?php
+
+declare(strict_types=1);
+
+use Illuminate\\Foundation\\Application;
+use Illuminate\\Foundation\\Configuration\\Exceptions;
+use Illuminate\\Foundation\\Configuration\\Middleware;
+
+return Application::configure(basePath: dirname(__DIR__))
+    ->withRouting(
+        api: __DIR__.'/../routes/api.php',
+        commands: __DIR__.'/../routes/console.php',
+        apiPrefix: '',
+    )
+    ->withMiddleware(static function (Middleware $middleware): void {
+    })
+    ->withExceptions(static function (Exceptions $exceptions): void {
+    })
+    ->create();
+`;
+}
+
+function laravelProviders() {
+  return `<?php
+
+declare(strict_types=1);
+
+use App\\Providers\\AppServiceProvider;
+
+return [
+    AppServiceProvider::class,
+];
+`;
+}
+
+function laravelAppConfig(projectName) {
+  return `<?php
+
+declare(strict_types=1);
+
+return [
+    'name' => env('APP_NAME', '${projectName}'),
+    'env' => env('APP_ENV', 'production'),
+    'debug' => (bool) env('APP_DEBUG', false),
+    'url' => env('APP_URL', 'http://localhost'),
+    'timezone' => 'UTC',
+    'locale' => env('APP_LOCALE', 'en'),
+    'fallback_locale' => env('APP_FALLBACK_LOCALE', 'en'),
+    'cipher' => 'AES-256-CBC',
+    'key' => env('APP_KEY'),
+    'previous_keys' => [
+        ...array_filter(explode(',', (string) env('APP_PREVIOUS_KEYS', ''))),
+    ],
+    'maintenance' => [
+        'driver' => env('APP_MAINTENANCE_DRIVER', 'file'),
+    ],
+];
+`;
+}
+
+function laravelLoggingConfig() {
+  return `<?php
+
+declare(strict_types=1);
+
+use Monolog\\Handler\\NullHandler;
+use Monolog\\Handler\\StreamHandler;
+
+return [
+    'default' => env('LOG_CHANNEL', 'stderr'),
+    'channels' => [
+        'stderr' => [
+            'driver' => 'monolog',
+            'handler' => StreamHandler::class,
+            'with' => ['stream' => 'php://stderr'],
+            'level' => env('LOG_LEVEL', 'info'),
+        ],
+        'null' => [
+            'driver' => 'monolog',
+            'handler' => NullHandler::class,
+        ],
+        'emergency' => [
+            'path' => storage_path('logs/laravel.log'),
+        ],
+    ],
+];
+`;
+}
+
+function laravelViewConfig() {
+  return `<?php
+
+declare(strict_types=1);
+
+return [
+    'paths' => [resource_path('views')],
+    'compiled' => env('VIEW_COMPILED_PATH', '/tmp'),
+];
+`;
+}
+
+function laravelPublicIndex() {
+  return `<?php
+
+declare(strict_types=1);
+
+use Illuminate\\Foundation\\Application;
+use Illuminate\\Http\\Request;
+
+define('LARAVEL_START', microtime(true));
+
+if (file_exists($maintenance = __DIR__.'/../storage/framework/maintenance.php')) {
+    require $maintenance;
+}
+
+require __DIR__.'/../vendor/autoload.php';
+
+/** @var Application $app */
+$app = require_once __DIR__.'/../bootstrap/app.php';
+
+$app->handleRequest(Request::capture());
+`;
+}
+
+function laravelApiRoutes() {
+  return `<?php
+
+declare(strict_types=1);
+
+use App\\Support\\ProjectInfo;
+use Illuminate\\Http\\JsonResponse;
+use Illuminate\\Support\\Facades\\Route;
+
+Route::get('/', static fn (): JsonResponse => response()->json([
+    'name' => ProjectInfo::name(),
+    'framework' => 'laravel',
+]));
+
+Route::get('/health', static fn (): JsonResponse => response()->json([
+    'status' => 'ok',
+]))->name('health');
+`;
+}
+
+function laravelConsoleRoutes() {
+  return `<?php
+
+declare(strict_types=1);
+
+use Illuminate\\Support\\Facades\\Artisan;
+
+Artisan::command('monox:ready', function (): void {
+    $this->info('ready');
+})->purpose('Verify that the generated application can boot');
+`;
+}
+
+function laravelEnvironmentBootstrap() {
+  return `<?php
+
+declare(strict_types=1);
+
+$root = dirname(__DIR__);
+$example = $root.'/.env.example';
+$environment = $root.'/.env';
+
+function monoxFileType(array $metadata): int
+{
+    return $metadata['mode'] & 0170000;
+}
+
+function monoxWriteExclusive(string $path, string $contents): void
+{
+    $previousUmask = umask(0077);
+    try {
+        $handle = @fopen($path, 'xb');
+    } finally {
+        umask($previousUmask);
+    }
+
+    if ($handle === false) {
+        throw new RuntimeException('Unable to create a protected environment file.');
+    }
+
+    try {
+        $offset = 0;
+        $length = strlen($contents);
+        while ($offset < $length) {
+            $written = fwrite($handle, substr($contents, $offset));
+            if ($written === false || $written === 0) {
+                throw new RuntimeException('Unable to write a protected environment file.');
+            }
+            $offset += $written;
+        }
+        if (!fflush($handle)) {
+            throw new RuntimeException('Unable to flush a protected environment file.');
+        }
+        if (function_exists('fsync') && !fsync($handle)) {
+            throw new RuntimeException('Unable to sync a protected environment file.');
+        }
+    } catch (Throwable $error) {
+        fclose($handle);
+        @unlink($path);
+        throw $error;
+    }
+
+    if (!fclose($handle)) {
+        @unlink($path);
+        throw new RuntimeException('Unable to close a protected environment file.');
+    }
+
+    clearstatcache(true, $path);
+    $metadata = @lstat($path);
+    if ($metadata === false || monoxFileType($metadata) !== 0100000) {
+        @unlink($path);
+        throw new RuntimeException('The protected environment path is not a regular file.');
+    }
+    if (DIRECTORY_SEPARATOR === '/' && ($metadata['mode'] & 0777) !== 0600) {
+        @unlink($path);
+        throw new RuntimeException('The protected environment file does not have mode 0600.');
+    }
+}
+
+function monoxProtectEnvironment(string $root, string $environment, string $contents): void
+{
+    $temporary = null;
+    for ($attempt = 0; $attempt < 10; $attempt++) {
+        $candidate = $root.'/.env.monox-'.bin2hex(random_bytes(16));
+        try {
+            monoxWriteExclusive($candidate, $contents);
+            $temporary = $candidate;
+            break;
+        } catch (RuntimeException $error) {
+            clearstatcache(true, $candidate);
+            if (file_exists($candidate) || is_link($candidate)) {
+                continue;
+            }
+            throw $error;
+        }
+    }
+
+    if ($temporary === null) {
+        throw new RuntimeException('Unable to allocate a protected environment file.');
+    }
+
+    try {
+        clearstatcache(true, $environment);
+        $metadata = @lstat($environment);
+        if ($metadata === false || monoxFileType($metadata) !== 0100000) {
+            throw new RuntimeException('Refusing to replace a non-regular .env path.');
+        }
+        if (!@rename($temporary, $environment)) {
+            throw new RuntimeException('Unable to atomically protect the local .env file.');
+        }
+        $temporary = null;
+    } finally {
+        if ($temporary !== null) {
+            @unlink($temporary);
+        }
+    }
+}
+
+function monoxWithApplicationKey(string $contents): string
+{
+    if (!preg_match('/^APP_KEY=(.*)$/m', $contents, $matches)) {
+        throw new RuntimeException('APP_KEY is missing from the local .env file.');
+    }
+    if (trim($matches[1]) !== '') {
+        return $contents;
+    }
+
+    $key = 'base64:'.base64_encode(random_bytes(32));
+    $updated = preg_replace('/^APP_KEY=.*$/m', 'APP_KEY='.$key, $contents, 1, $count);
+    if ($updated === null || $count !== 1) {
+        throw new RuntimeException('Unable to prepare APP_KEY for the local .env file.');
+    }
+    return $updated;
+}
+
+$exampleMetadata = @lstat($example);
+if ($exampleMetadata === false || monoxFileType($exampleMetadata) !== 0100000) {
+    throw new RuntimeException('The .env.example path must be a regular file.');
+}
+$exampleContents = file_get_contents($example);
+if ($exampleContents === false) {
+    throw new RuntimeException('Unable to read the .env.example file.');
+}
+
+clearstatcache(true, $environment);
+$environmentMetadata = @lstat($environment);
+if ($environmentMetadata === false) {
+    monoxWriteExclusive($environment, monoxWithApplicationKey($exampleContents));
+    exit(0);
+}
+if (monoxFileType($environmentMetadata) !== 0100000) {
+    throw new RuntimeException('Refusing to use a non-regular .env path.');
+}
+
+$contents = file_get_contents($environment);
+if ($contents === false) {
+    throw new RuntimeException('Unable to read the local .env file.');
+}
+$updated = monoxWithApplicationKey($contents);
+$needsProtectedMode = DIRECTORY_SEPARATOR === '/' && ($environmentMetadata['mode'] & 0777) !== 0600;
+if ($updated !== $contents || $needsProtectedMode) {
+    monoxProtectEnvironment($root, $environment, $updated);
+}
+`;
+}
+
+function laravelSmokeTest() {
+  return `<?php
+
+declare(strict_types=1);
+
+use App\\Support\\ProjectInfo;
+use Illuminate\\Contracts\\Http\\Kernel;
+use Illuminate\\Foundation\\Application;
+use Illuminate\\Http\\Request;
+
+require __DIR__.'/../vendor/autoload.php';
+
+/** @var Application $app */
+$app = require __DIR__.'/../bootstrap/app.php';
+/** @var Kernel $kernel */
+$kernel = $app->make(Kernel::class);
+
+$root = $kernel->handle(Request::create('/', 'GET', server: ['HTTP_ACCEPT' => 'application/json']));
+if ($root->getStatusCode() !== 200 || json_decode($root->getContent(), true)['name'] !== ProjectInfo::name()) {
+    throw new RuntimeException('The generated Laravel API route did not boot correctly.');
+}
+$kernel->terminate(Request::create('/', 'GET'), $root);
+
+$healthRequest = Request::create('/health', 'GET');
+$health = $kernel->handle($healthRequest);
+if ($health->getStatusCode() !== 200 || json_decode($health->getContent(), true)['status'] !== 'ok') {
+    throw new RuntimeException('The generated Laravel health route is not ready.');
+}
+$kernel->terminate($healthRequest, $health);
+`;
+}
+
+function directoryKeepFile() {
+  return '*\n!.gitignore\n';
 }
 
 function goChiServer(port) {
