@@ -1,12 +1,14 @@
 # Kubernetes rendering
 
-`example.deployment.json` is a synthetic deployment v1 document. The reserved `.invalid` host and registry are
-deliberately non-routable and must be replaced by an operator before deployment.
+`example.deployment.json` is the compatibility deployment v1 fixture. `example.v2.deployment.json` is the
+package-owned workload intent used by MonoX 0.2. Reserved `.invalid` hosts and registries are deliberately
+non-routable and must be replaced by a selected target before apply.
 
 Validate and render it from the repository root:
 
 ```bash
 node packages/kube-renderer/src/cli.mjs validate infra/kubernetes/example.deployment.json
+node packages/kube-renderer/src/cli.mjs validate infra/kubernetes/example.v2.deployment.json
 node packages/kube-renderer/src/cli.mjs render infra/kubernetes/example.deployment.json \
   --output /tmp/example-manifests.yaml
 ```
@@ -15,14 +17,30 @@ The output is provider-neutral. It can be passed to `kubectl`, GitOps, Pulumi, T
 adapter after the operator supplies an explicit environment and reviews the diff. This repository
 intentionally does not include a credential-bearing provider program.
 
-The example enables Namespace, ServiceAccount, Deployment, Service, Ingress, PodDisruptionBudget, topology
-spread, NetworkPolicy and HPA resources. Set `autoscaling.mode` to `keda` and supply external trigger metadata
-to use scale to zero. KEDA and referenced authentication resources must already exist in the target cluster.
+The v2 example enables Namespace, ServiceAccount, Deployment, Service, Ingress, PodDisruptionBudget, topology
+spread, NetworkPolicy, HPA and ServiceMonitor resources. KEDA can replace HPA for RPS, queue and custom event
+sources, and is required for scale to zero. KEDA and referenced authentication resources must already exist in
+the target cluster.
 
 The NetworkPolicy allows only the selected gateway to reach the application port. Egress is independently
 allowlisted for DNS, HTTPS and same-namespace pods. Tighten those switches for workloads with narrower needs.
 
-Rendering does not deploy and does not contact a cluster.
+Rendering does not deploy and does not contact a cluster. `@monox/cloudapter-kubernetes` also remains offline
+until a caller injects an approved cluster transport. It never selects a local kube context implicitly.
+
+## Production defaults
+
+- Restricted Pod Security admission labels, non-root containers, read-only root filesystems and seccomp.
+- Dedicated ServiceAccounts with token automount disabled. AWS IRSA and GKE Workload Identity use annotations
+  derived from reference-only identity fields.
+- Default-deny-friendly NetworkPolicies. Networked workloads accept traffic only from namespaces labelled
+  `monox.dev/gateway-access=true`.
+- Requests, limits, three probes, topology spread and a bounded autoscaler.
+- Long-running workers require an explicit drain hook and a termination grace period that covers the drain
+  timeout. HPA and KEDA use scale-down stabilization.
+- GPU requests use Kubernetes extended resources such as `nvidia.com/gpu`; cloud machine types stay in the
+  provider target.
+- Persistent model storage becomes a StatefulSet volume claim template, giving every replica its own cache.
 
 ## Runtime smoke
 

@@ -1,17 +1,25 @@
 # `@monox/kube-renderer`
 
-`@monox/kube-renderer` turns a validated deployment v1 JSON document into deterministic Kubernetes YAML. It
-uses Node built-ins plus `@monox/deploy-schema`; it does not need Helm, a cluster connection or provider
-credentials.
+`@monox/kube-renderer` turns a validated deployment v1 document or resolved deployment v2 workload wrapper
+into deterministic Kubernetes YAML. It uses Node built-ins plus `@monox/deploy-schema`; it does not need Helm,
+a cluster connection or provider credentials.
 
 The renderer can produce:
 
 - Namespace and a dedicated ServiceAccount
-- Deployment with rolling updates, three HTTP probes, resources and a restricted security context
+- Deployment, StatefulSet, Job or CronJob for service, worker, model, static, job and cron intents
+- HTTP, TCP or exec probes, bounded resources and a restricted security context
 - Service and optional Ingress
 - PodDisruptionBudget and topology spread constraints
-- ingress and egress NetworkPolicy rules
-- `autoscaling/v2` HPA or an optional KEDA `ScaledObject` with scale to zero
+- ingress and egress NetworkPolicy rules, with default egress limited to cluster DNS and same-namespace pods
+- `autoscaling/v2` HPA or KEDA CPU, memory, RPS, queue and custom scaling with bounded fallback
+- GPU extended resources, provider-neutral scheduling, persistent storage and per-replica model caches
+- optional Prometheus Operator `ServiceMonitor`
+
+Workers with `network.exposure: none` receive no Service and no Ingress. Every pod uses a dedicated
+ServiceAccount, disables token automount, runs non-root with a read-only root filesystem, drops all Linux
+capabilities and uses the runtime-default seccomp profile. Namespace output enforces the restricted Pod
+Security Standard.
 
 ## CLI
 
@@ -19,6 +27,7 @@ From the repository root:
 
 ```bash
 node packages/kube-renderer/src/cli.mjs validate infra/kubernetes/example.deployment.json
+node packages/kube-renderer/src/cli.mjs validate infra/kubernetes/example.v2.deployment.json
 node packages/kube-renderer/src/cli.mjs render infra/kubernetes/example.deployment.json
 node packages/kube-renderer/src/cli.mjs render infra/kubernetes/example.deployment.json \
   --output /tmp/example-manifests.yaml
@@ -32,15 +41,21 @@ commands fail closed when the document violates the versioned contract.
 ```js
 import { buildKubernetesResources, renderKubernetesManifests } from '@monox/kube-renderer';
 
-const resources = buildKubernetesResources(deploymentConfig);
-const yaml = renderKubernetesManifests(deploymentConfig);
+const resources = buildKubernetesResources(resolvedWorkloadOrV1Config);
+const yaml = renderKubernetesManifests(resolvedWorkloadOrV1Config);
 ```
 
 `buildKubernetesResources` is useful for policy tests and adapters. `renderKubernetesManifests` serializes the
 same objects as a stable multi-document YAML stream.
 
-KEDA itself and any referenced `TriggerAuthentication` are cluster-level prerequisites. The renderer only
-emits the application `ScaledObject`; credentials stay in an external secret store.
+KEDA, the Prometheus Operator, NVIDIA GPU support and referenced `TriggerAuthentication` resources are
+cluster-level prerequisites. The renderer emits only workload-owned resources; credentials stay in an external
+secret store. RPS scaling requires an explicit Prometheus endpoint URL in the metric `sourceRef`, not from a
+credential-bearing workload value.
+
+Long-running workers must enable `lifecycle.drain`, provide `preStopCommand`, and give Kubernetes at least the
+declared drain timeout as termination grace. The generated autoscaler uses a five-minute scale-down
+stabilization window unless the deployment contract provides a stricter value.
 
 Run the tests with:
 

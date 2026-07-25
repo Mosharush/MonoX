@@ -20,3 +20,11 @@ Do not include production credentials, customer data or unrelated private source
 - Deployment defaults to render and validate, not apply.
 - CI uses read-only permissions unless a release job needs a narrow write permission.
 - Autoscaling stays bounded by explicit configuration.
+- Package deployment configuration rejects secret-like inline environment values and requires external
+  references for credentials.
+- Production plans require a protected CI or OIDC identity, and stale plans are rejected before apply.
+- GitHub secret scanning, push protection, Dependabot security updates and CodeQL default setup protect the
+  public repository. CI adds a failing full-history scan, dependency audit and source SBOM.
+
+The incident response and history rewrite procedure is documented in the
+[security gate](docs/security-gate.md).

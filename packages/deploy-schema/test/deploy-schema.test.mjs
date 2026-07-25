@@ -118,6 +118,52 @@ test('rejects mutable image tags and inline secret-like environment values', () 
   );
 });
 
+test('rejects camelCase credential fields but accepts explicit environment references', () => {
+  const invalid = validateDeploymentConfig(
+    validConfig({
+      container: {
+        port: 3000,
+        env: [
+          { name: 'clientSecret', value: 'unsafe' },
+          { name: 'serviceAccountKey', value: 'unsafe' },
+        ],
+      },
+    })
+  );
+  assert.equal(invalid.valid, false);
+  assert.equal(
+    invalid.errors.filter((error) => error.code === 'security' && error.path.endsWith('.value')).length,
+    2
+  );
+
+  const references = validateDeploymentConfig(
+    validConfig({
+      container: {
+        port: 3000,
+        env: [
+          { name: 'tokenRef', value: 'runtime-token' },
+          { name: 'credentialName', value: 'runtime-credential' },
+        ],
+      },
+    })
+  );
+  assert.equal(references.valid, true, JSON.stringify(references.errors));
+});
+
+test('rejects recognizable credential material under a neutral environment name', () => {
+  const result = validateDeploymentConfig(
+    validConfig({
+      container: {
+        port: 3000,
+        env: [{ name: 'UPSTREAM_HEADER', value: 'Bearer unsafe' }],
+      },
+    })
+  );
+  assert(
+    result.errors.some((error) => error.path === '$.container.env[0].value' && error.code === 'security')
+  );
+});
+
 test('rejects resource requests above limits and invalid HPA scale to zero', () => {
   const result = validateDeploymentConfig(
     validConfig({

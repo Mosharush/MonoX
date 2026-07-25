@@ -1,7 +1,8 @@
 # GitHub automation
 
-GitHub Actions enforce the public-source quality and release boundaries. Pushing source runs read-only CI;
-publishing packages or containers requires an explicit release trigger and a protected environment.
+GitHub Actions enforce the public-source quality and release boundaries. Pushing source runs CI using a
+read-only GitHub token; publishing packages or containers requires an explicit release trigger and a protected
+environment.
 
 ## Repository controls
 
@@ -24,8 +25,18 @@ publishing packages or containers requires an explicit release trigger and a pro
 ## Workflow boundaries
 
 - `ci.yml` runs the complete formatting, repository-rule, test, build, and infrastructure gate on Node.js 22,
-  24, and 26. It also runs dependency review, dependency audit, and secret scanning. Dependency review
-  requires a public repository or the corresponding GitHub security entitlement.
+  24, and 26. It also runs dependency review, dependency audit, full-history secret scanning and generates an
+  SPDX JSON source SBOM. Dependency review requires a public repository or the corresponding GitHub security
+  entitlement.
+- `alpha-acceptance.yml` verifies the seven synthetic migration goldens and generates one representative Node,
+  Python, PHP and Go project. It installs each selected toolchain, verifies `monox.lock`, builds and tests the
+  workspaces, then starts the Node and Python APIs and probes their health endpoints. A separate job exercises
+  the built-in local Cloudapter through doctor, deploy, an explicit health probe, status and owned-service
+  destroy. This is representative coverage, not the complete catalog matrix.
+- `catalog-matrix.yml` is scheduled weekly and can be started manually. It generates every one of the 24
+  bundled workspace recipes in isolation, installs the selected toolchain, verifies the lock, runs tests and
+  builds. It then runs the shared acceptance helper, which probes services, checks workers, waits for jobs and
+  cron workloads, and marks libraries as not applicable.
 - `kubernetes-smoke.yml` builds the synthetic API image, renders the runtime fixture, applies it to a
   disposable kind cluster, waits for rollout, checks workload policy, and probes the Service. kind, kubectl,
   and the kind node image are pinned and verified. The workflow never contacts a production cluster.
@@ -39,12 +50,17 @@ publishing packages or containers requires an explicit release trigger and a pro
   continue to block publication.
 
 `create-monox` exists on npm under the `mosharush` maintainer account. Version 0.1.0 was the first release
-from this public repository and upgraded the historical 0.0.5 package in place. Patch releases keep the
-`https://github.com/Mosharush/MonoX` metadata, include the MIT license in the tarball, and use trusted
-publishing with registry provenance.
+from this public repository and upgraded the historical 0.0.5 package in place. The public `latest` tag is
+currently 0.1.2; the 0.2 source stays on an alpha prerelease until the release gates are complete. Releases
+keep the `https://github.com/Mosharush/MonoX` metadata, include the MIT license in the tarball, and use
+trusted publishing with registry provenance.
 
-There is intentionally no cloud deployment workflow. Add deployment automation only after an environment,
-threat model, OIDC trust policy, and approval boundary are designed and reviewed.
+CodeQL uses GitHub default setup with JavaScript and TypeScript analysis. Keep that repository-level setup
+instead of adding a duplicate advanced workflow.
+
+There is intentionally no workflow with static cloud credentials. Cloud apply workflows may be added only
+after an environment, threat model, OIDC trust policy, protected environment and exact adapter scope are
+reviewed.
 
 ## Action pinning
 

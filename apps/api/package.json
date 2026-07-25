@@ -1,13 +1,123 @@
 {
   "name": "@monox/api",
-  "version": "0.1.0",
+  "version": "0.2.0-alpha.1",
   "private": true,
   "type": "module",
-  "monox": {
+  "deployment": {
+    "schemaVersion": "2",
+    "enabled": true,
+    "id": "api",
     "kind": "service",
-    "runtime": "node",
-    "port": 3000,
-    "healthPath": "/healthz"
+    "build": {
+      "strategy": "dockerfile",
+      "context": ".",
+      "dockerfile": "infra/docker/Dockerfile.node",
+      "script": "build"
+    },
+    "runtime": {
+      "language": "javascript",
+      "framework": "node-http",
+      "command": [
+        "node",
+        "apps/api/src/server.mjs"
+      ],
+      "workingDirectory": "."
+    },
+    "network": {
+      "exposure": "public",
+      "ports": [
+        {
+          "name": "http",
+          "containerPort": 3000,
+          "servicePort": 80
+        }
+      ],
+      "routes": [
+        {
+          "path": "/api",
+          "pathType": "Prefix"
+        }
+      ]
+    },
+    "probes": {
+      "startup": {
+        "type": "http",
+        "path": "/livez",
+        "port": "http",
+        "periodSeconds": 2,
+        "failureThreshold": 30
+      },
+      "readiness": {
+        "type": "http",
+        "path": "/readyz",
+        "port": "http",
+        "periodSeconds": 5
+      },
+      "liveness": {
+        "type": "http",
+        "path": "/livez",
+        "port": "http",
+        "periodSeconds": 10
+      }
+    },
+    "env": {
+      "values": {
+        "NODE_ENV": "production"
+      },
+      "secretRefs": []
+    },
+    "resources": {
+      "requests": {
+        "cpu": "100m",
+        "memory": "128Mi"
+      },
+      "limits": {
+        "cpu": "500m",
+        "memory": "512Mi"
+      },
+      "accelerators": []
+    },
+    "identity": {
+      "automountServiceAccountToken": false
+    },
+    "telemetry": {
+      "metrics": {
+        "enabled": true,
+        "path": "/metrics",
+        "port": 3000
+      },
+      "traces": {
+        "enabled": false
+      },
+      "logs": {
+        "enabled": true
+      }
+    },
+    "lifecycle": {
+      "terminationGracePeriodSeconds": 60,
+      "preStopCommand": [],
+      "drain": {
+        "enabled": true,
+        "timeoutSeconds": 30
+      }
+    },
+    "scaling": {
+      "mode": "hpa",
+      "minReplicas": 1,
+      "maxReplicas": 6,
+      "metrics": [
+        {
+          "type": "cpu",
+          "target": 70
+        }
+      ],
+      "behavior": {
+        "scaleDownStabilizationSeconds": 300
+      }
+    },
+    "variants": {},
+    "environments": {},
+    "adapterOverrides": {}
   },
   "scripts": {
     "build": "node ../../scripts/build-workspace.mjs",
@@ -15,6 +125,7 @@
     "start": "node src/server.mjs"
   },
   "dependencies": {
+    "@monox/app-runtime": "workspace:^",
     "@monox/shared": "workspace:^"
   }
 }

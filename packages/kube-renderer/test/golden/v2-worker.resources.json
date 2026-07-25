@@ -1,0 +1,32 @@
+[
+  {
+    "apiVersion": "v1",
+    "kind": "Namespace",
+    "name": "example-production"
+  },
+  {
+    "apiVersion": "v1",
+    "kind": "ServiceAccount",
+    "name": "queue-worker"
+  },
+  {
+    "apiVersion": "apps/v1",
+    "kind": "Deployment",
+    "name": "queue-worker"
+  },
+  {
+    "apiVersion": "policy/v1",
+    "kind": "PodDisruptionBudget",
+    "name": "queue-worker"
+  },
+  {
+    "apiVersion": "networking.k8s.io/v1",
+    "kind": "NetworkPolicy",
+    "name": "queue-worker"
+  },
+  {
+    "apiVersion": "keda.sh/v1alpha1",
+    "kind": "ScaledObject",
+    "name": "queue-worker"
+  }
+]

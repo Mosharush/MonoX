@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:monox:project:v2",
+  "title": "MonoX project configuration v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "project",
+    "boundaries",
+    "workloadProfiles",
+    "environments",
+    "targets",
+    "addons"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": "2" },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "workspaceGlobs"],
+      "properties": {
+        "name": { "$ref": "#/$defs/id" },
+        "workspaceGlobs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "defaultEnvironment": { "$ref": "#/$defs/id" }
+      }
+    },
+    "boundaries": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "uniqueItems": true,
+        "items": { "type": "string", "minLength": 1 }
+      }
+    },
+    "workloadProfiles": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[a-z][a-z0-9-]{0,62}$" },
+      "additionalProperties": { "type": "object" }
+    },
+    "environments": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "pattern": "^[a-z][a-z0-9-]{0,62}$" },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["bindings"],
+        "properties": {
+          "production": { "type": "boolean" },
+          "protected": { "type": "boolean" },
+          "bindings": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["target", "selector"],
+              "properties": {
+                "target": { "$ref": "#/$defs/id" },
+                "selector": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "workloads": { "$ref": "#/$defs/uniqueStrings" },
+                    "kinds": { "$ref": "#/$defs/uniqueStrings" },
+                    "profiles": { "$ref": "#/$defs/uniqueStrings" },
+                    "locations": { "$ref": "#/$defs/uniqueStrings" },
+                    "variants": { "$ref": "#/$defs/uniqueStrings" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "targets": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "pattern": "^[a-z][a-z0-9-]{0,62}$" },
+      "additionalProperties": { "$ref": "#/$defs/target" }
+    },
+    "addons": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[a-z][a-z0-9-]{0,62}$" },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["recipe", "enabled", "mode"],
+        "properties": {
+          "recipe": {
+            "type": "string",
+            "pattern": "^(?:[a-z][a-z0-9-]{0,62}|@[a-z0-9][a-z0-9-]*/[a-z][a-z0-9-]*)$"
+          },
+          "enabled": { "type": "boolean" },
+          "mode": { "enum": ["bundled", "managed", "external"] },
+          "environments": { "$ref": "#/$defs/uniqueStrings" },
+          "config": { "$ref": "#/$defs/stringMap" },
+          "secretRefs": { "$ref": "#/$defs/uniqueStrings" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,62}$" },
+    "uniqueStrings": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "stringMap": { "type": "object", "additionalProperties": { "type": "string" } },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider", "provisioner", "transport", "runtime"],
+      "properties": {
+        "provider": { "enum": ["generic", "aws", "gcp"] },
+        "provisioner": { "enum": ["none", "pulumi"] },
+        "transport": {
+          "enum": ["local", "ssh", "aws-ssm", "gcp-iap", "coolify-api", "kubernetes-api"]
+        },
+        "runtime": { "enum": ["pm2", "docker", "coolify", "kubernetes", "static"] },
+        "bindings": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "namespace": { "type": "string", "minLength": 1 },
+            "registry": { "type": "string", "minLength": 1 },
+            "domain": { "type": "string", "minLength": 1 },
+            "identityRef": { "type": "string", "minLength": 1 },
+            "secretStoreRef": { "type": "string", "minLength": 1 }
+          }
+        },
+        "region": { "type": "string", "minLength": 1 },
+        "projectRef": { "type": "string", "minLength": 1 },
+        "serverRef": { "type": "string", "minLength": 1 },
+        "clusterRef": { "type": "string", "minLength": 1 },
+        "ttlHours": { "type": "integer", "minimum": 1, "maximum": 720 }
+      }
+    }
+  }
+}

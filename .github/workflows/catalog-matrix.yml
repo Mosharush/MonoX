@@ -1,0 +1,125 @@
+name: Scheduled catalog matrix
+
+on:
+  schedule:
+    - cron: '17 3 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: catalog-matrix-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  COREPACK_ENABLE_DOWNLOAD_PROMPT: 0
+
+jobs:
+  workspace-recipe:
+    name: Recipe ${{ matrix.recipe }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { recipe: node-http-api, family: javascript }
+          - { recipe: node-fastify-api, family: javascript }
+          - { recipe: node-express-api, family: javascript }
+          - { recipe: node-nest-api, family: javascript }
+          - { recipe: node-hono-api, family: javascript }
+          - { recipe: node-worker, family: javascript }
+          - { recipe: node-cron, family: javascript }
+          - { recipe: react-vite-web, family: javascript }
+          - { recipe: vue-vite-web, family: javascript }
+          - { recipe: next-web, family: javascript }
+          - { recipe: nuxt-web, family: javascript }
+          - { recipe: sveltekit-web, family: javascript }
+          - { recipe: angular-web, family: javascript }
+          - { recipe: typescript-library, family: javascript }
+          - { recipe: python-fastapi-api, family: python }
+          - { recipe: python-django-api, family: python }
+          - { recipe: python-worker, family: python }
+          - { recipe: python-model, family: python }
+          - { recipe: python-library, family: python }
+          - { recipe: php-laravel-api, family: php }
+          - { recipe: php-library, family: php }
+          - { recipe: go-chi-api, family: go }
+          - { recipe: go-worker, family: go }
+          - { recipe: go-library, family: go }
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+
+      - name: Set up Python
+        if: matrix.family == 'python'
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13'
+
+      - name: Set up PHP and Composer
+        if: matrix.family == 'php'
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: '8.4'
+          tools: composer
+          coverage: none
+
+      - name: Set up Go
+        if: matrix.family == 'go'
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.25.x'
+
+      - name: Install repository dependencies
+        run: |
+          npm install --global corepack@0.35.0
+          corepack enable
+          yarn install --immutable
+
+      - name: Generate one isolated recipe
+        shell: bash
+        run: |
+          set -euo pipefail
+          project_directory="${RUNNER_TEMP}/catalog-${{ matrix.recipe }}"
+          node packages/create-monox/src/cli.mjs catalog-acceptance \
+            --directory "${project_directory}" \
+            --package-manager npm \
+            --workspace app=${{ matrix.recipe }} \
+            --delivery docker:local \
+            --infra none \
+            --yes \
+            --no-git \
+            --no-install
+          echo "MONOX_CATALOG_PROJECT=${project_directory}" >> "${GITHUB_ENV}"
+
+      - name: Install generated JavaScript dependencies
+        run: cd "${MONOX_CATALOG_PROJECT}" && npx --yes npm@12.0.1 install
+
+      - name: Install Python tooling
+        if: matrix.family == 'python'
+        run: python -m pip install --disable-pip-version-check uv==0.9.7
+
+      - name: Bootstrap generated language tooling
+        if: matrix.family != 'javascript'
+        run: cd "${MONOX_CATALOG_PROJECT}" && npx --yes npm@12.0.1 run bootstrap:toolchains
+
+      - name: Verify, test and build generated workspace
+        run: |
+          cd "${MONOX_CATALOG_PROJECT}"
+          npx --yes npm@12.0.1 run catalog:verify
+          npx --yes npm@12.0.1 test
+          npx --yes npm@12.0.1 run test:workspaces
+          npx --yes npm@12.0.1 run build
+
+      - name: Start and probe generated workload
+        run: node scripts/accept-generated-workspace.mjs --root "${MONOX_CATALOG_PROJECT}" --workspace app

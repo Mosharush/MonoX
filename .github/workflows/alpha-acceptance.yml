@@ -1,0 +1,224 @@
+name: 0.2 alpha acceptance
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: alpha-acceptance-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  COREPACK_ENABLE_DOWNLOAD_PROMPT: 0
+
+jobs:
+  migration-goldens:
+    name: Synthetic migration goldens
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+
+      - name: Install pinned Corepack
+        run: npm install --global corepack@0.35.0
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies immutably
+        run: yarn install --immutable
+
+      - name: Verify synthetic migration goldens
+        run: node --test packages/cli/test/fixtures/migration-goldens.test.mjs
+
+  representative-polyglot:
+    name: Representative Node, Python, PHP and Go project
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13'
+
+      - name: Set up PHP and Composer
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: '8.4'
+          tools: composer
+          coverage: none
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.25.x'
+
+      - name: Install pinned Corepack and repository dependencies
+        run: |
+          npm install --global corepack@0.35.0
+          corepack enable
+          yarn install --immutable
+
+      - name: Generate a representative polyglot project
+        shell: bash
+        run: |
+          set -euo pipefail
+          project_directory="${RUNNER_TEMP}/monox-polyglot"
+          node packages/create-monox/src/cli.mjs polyglot-acceptance \
+            --directory "${project_directory}" \
+            --package-manager npm \
+            --workspace api=node-fastify-api \
+            --workspace python-api=python-fastapi-api \
+            --workspace php-lib=php-library \
+            --workspace go-lib=go-library \
+            --delivery docker:local \
+            --infra none \
+            --yes \
+            --no-git \
+            --no-install
+          echo "MONOX_POLYGLOT_DIRECTORY=${project_directory}" >> "${GITHUB_ENV}"
+
+      - name: Install generated project toolchains
+        run: |
+          cd "${MONOX_POLYGLOT_DIRECTORY}"
+          npx --yes npm@12.0.1 install
+          python -m pip install --disable-pip-version-check uv==0.9.7
+          npx --yes npm@12.0.1 run bootstrap:toolchains
+
+      - name: Verify, test and build generated workspaces
+        run: |
+          cd "${MONOX_POLYGLOT_DIRECTORY}"
+          npx --yes npm@12.0.1 run catalog:verify
+          npx --yes npm@12.0.1 test
+          npx --yes npm@12.0.1 run test:workspaces
+          npx --yes npm@12.0.1 run build
+
+      - name: Start representative APIs and check health
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "${MONOX_POLYGLOT_DIRECTORY}"
+          api_pid=""
+          python_pid=""
+          trap '
+            if [[ -n "${api_pid}" ]]; then kill "${api_pid}" 2>/dev/null || true; fi
+            if [[ -n "${python_pid}" ]]; then kill "${python_pid}" 2>/dev/null || true; fi
+          ' EXIT
+
+          npx --yes npm@12.0.1 run start:api > "${RUNNER_TEMP}/monox-node-api.log" 2>&1 &
+          api_pid="$!"
+          npx --yes npm@12.0.1 run start:python-api > "${RUNNER_TEMP}/monox-python-api.log" 2>&1 &
+          python_pid="$!"
+
+          for _ in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:3001/health >/dev/null && \
+              curl --fail --silent http://127.0.0.1:8000/health >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+
+          cat "${RUNNER_TEMP}/monox-node-api.log" >&2
+          cat "${RUNNER_TEMP}/monox-python-api.log" >&2
+          exit 1
+
+  local-cloudapter-smoke:
+    name: Local Cloudapter deploy and destroy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+
+      - name: Install repository dependencies
+        run: |
+          npm install --global corepack@0.35.0
+          corepack enable
+          yarn install --immutable
+
+      - name: Generate local delivery fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          project_directory="${RUNNER_TEMP}/local-cloudapter-smoke"
+          node packages/create-monox/src/cli.mjs local-cloudapter-smoke \
+            --directory "${project_directory}" \
+            --package-manager npm \
+            --workspace api=node-http-api \
+            --delivery docker:local \
+            --infra docker \
+            --yes \
+            --no-git \
+            --no-install
+          cd "${project_directory}"
+          npx --yes npm@12.0.1 install
+          echo "MONOX_LOCAL_PROJECT=${project_directory}" >> "${GITHUB_ENV}"
+
+      - name: Deploy through the built-in local executor
+        run: |
+          node packages/cli/src/cli.mjs doctor \
+            --root "${MONOX_LOCAL_PROJECT}" \
+            --env development \
+            --target docker-local
+          node packages/cli/src/cli.mjs deploy \
+            --root "${MONOX_LOCAL_PROJECT}" \
+            --env development \
+            --target docker-local \
+            --all
+          curl --fail --silent http://127.0.0.1:3001/health >/dev/null
+          node packages/cli/src/cli.mjs status \
+            --root "${MONOX_LOCAL_PROJECT}" \
+            --env development \
+            --target docker-local
+          test -n "$(find "${MONOX_LOCAL_PROJECT}/.monox/receipts" -type f -name '*.json' -print -quit)"
+
+      - name: Destroy only the owned service
+        run: |
+          node packages/cli/src/cli.mjs destroy \
+            --root "${MONOX_LOCAL_PROJECT}" \
+            --env development \
+            --target docker-local \
+            --confirm local-cloudapter-smoke/development/docker-local
+          test -z "$(docker compose \
+            --project-name local-cloudapter-smoke-development \
+            -f "${MONOX_LOCAL_PROJECT}/infra/local/docker-compose.yml" \
+            ps --quiet api)"
+
+      - name: Stop the owned fixture after a failed run
+        if: always()
+        run: |
+          docker compose \
+            --project-name local-cloudapter-smoke-development \
+            -f "${MONOX_LOCAL_PROJECT}/infra/local/docker-compose.yml" \
+            stop --timeout 10 api || true

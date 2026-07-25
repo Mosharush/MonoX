@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="MonoX מייצר monorepo מוכן לעבודה עם web, API ו-worker, local services, CI, containers ו-delivery path ברור."
+    />
+    <meta name="theme-color" content="#07111f" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="MonoX" />
+    <meta property="og:locale" content="he_IL" />
+    <meta property="og:locale:alternate" content="en_US" />
+    <meta property="og:title" content="MonoX | ה-repo וה-delivery path נוצרים יחד" />
+    <meta
+      property="og:description"
+      content="מייצרים workspaces, boundaries, local services, CI, containers ו-delivery contracts בפקודה אחת."
+    />
+    <meta property="og:url" content="https://monox.dev/?lang=he" />
+    <meta property="og:image" content="https://monox.dev/og-image.png" />
+    <meta property="og:image:secure_url" content="https://monox.dev/og-image.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="MonoX monorepo ו-delivery toolkit" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="MonoX | ה-repo וה-delivery path נוצרים יחד" />
+    <meta
+      name="twitter:description"
+      content="מייצרים workspaces, boundaries, local services, CI, containers ו-delivery contracts בפקודה אחת."
+    />
+    <meta name="twitter:image" content="https://monox.dev/og-image.png" />
+    <link rel="canonical" href="https://monox.dev/?lang=he" />
+    <link rel="alternate" hreflang="en" href="https://monox.dev/?lang=en" />
+    <link rel="alternate" hreflang="he" href="https://monox.dev/?lang=he" />
+    <link rel="alternate" hreflang="x-default" href="https://monox.dev/" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-64.png" type="image/png" sizes="64x64" />
+    <link rel="apple-touch-icon" href="/app-icon.png" />
+    <title>MonoX | ה-repo וה-delivery path נוצרים יחד</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">דלגו לתוכן</a>
+
+    <header class="site-header" aria-label="אתר MonoX">
+      <a class="wordmark" href="/?lang=he" aria-label="דף הבית של MonoX">
+        <img src="/brand/monox-lockup-horizontal-reverse.svg" width="125" height="40" alt="MonoX" />
+      </a>
+      <nav class="header-actions" aria-label="ניווט ראשי">
+        <span class="release-status" dir="ltr">0.2 alpha</span>
+        <a href="#proof">הוכחה</a>
+        <a href="https://github.com/Mosharush/MonoX">GitHub</a>
+        <a href="https://www.npmjs.com/package/create-monox">npm</a>
+        <a href="/?lang=en" lang="en" hreflang="en">English</a>
+      </nav>
+    </header>
+
+    <main id="main-content">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="context">Monorepo generator ו-delivery contracts</p>
+          <h1 id="hero-title">מייצרים את המוצר ואת ה-delivery path ביחד.</h1>
+          <p class="lede">
+            פקודה אחת כותבת workspaces ל-web, API ו-worker, מגדירה dependency boundaries, מחברת local
+            services, CI ו-containers, ונותנת מסלול ברור ל-PM2, Coolify או Kubernetes. המפתחים וה-coding
+            agents עובדים מול אותו contract בכל package.
+          </p>
+          <div class="actions">
+            <a class="primary-action" href="#command">מציצים ל-0.2 alpha</a>
+            <a class="text-action" href="https://github.com/Mosharush/MonoX">רואים את הקוד</a>
+          </div>
+        </div>
+
+        <aside class="command-panel" id="command" aria-labelledby="command-title">
+          <div class="panel-heading">
+            <strong id="command-title">יוצרים מוצר</strong>
+            <span>deterministic recipes</span>
+          </div>
+          <p>הפקודה תהיה זמינה אחרי שה-prerelease המוגן יתפרסם תחת <code>next</code>.</p>
+          <pre tabindex="0"><code><strong>npm create monox@next -- my-product \</strong>
+<span>  --workspace api=node-fastify-api \</span>
+<span>  --workspace web=react-vite-web \</span>
+<span>  --workspace jobs=node-worker \</span>
+<span>  --addon redis --addon rabbitmq \</span>
+<span>  --delivery docker:local --yes</span></code></pre>
+          <p>
+            עד אז <code>@latest</code> נשאר ה-release היציב. בחירה שלא נתמכת נכשלת לפני ש-MonoX כותב קבצים או
+            משנה infra.
+          </p>
+        </aside>
+      </section>
+
+      <section class="proof" id="proof" aria-labelledby="proof-title">
+        <div class="section-intro">
+          <p class="context">מה הפקודה באמת כותבת</p>
+          <h2 id="proof-title">Repo עם מקום ברור לקוד של המוצר, לקוד reusable ול-infra</h2>
+          <p>
+            ה-recipes מגיעים bundled ו-versioned. הקובץ <code>monox.lock</code> שומר version ו-integrity, כדי
+            שגם במחשב אחר יהיה ברור בדיוק מה יצר את המבנה.
+          </p>
+        </div>
+
+        <div class="proof-layout">
+          <pre class="tree" tabindex="0" aria-label="מבנה הפרויקט שנוצר"><code>my-product/
+├── apps/
+│   ├── api/
+│   ├── jobs/
+│   └── web/
+├── packages/
+├── infra/
+│   ├── docker/
+│   └── local/
+├── .github/workflows/ci.yml
+├── AGENTS.md
+├── monox.config.json
+└── monox.lock</code></pre>
+
+          <div class="proof-copy">
+            <p class="proof-kicker">Source of truth אחד לכל app</p>
+            <pre tabindex="0"><code><span>"deployment": {</span>
+<span>  "schemaVersion": "2",</span>
+<span>  "id": "jobs",</span>
+<span>  "kind": "worker",</span>
+<span>  "network": { "exposure": "none" },</span>
+<span>  "env": { "secretRefs": [{</span>
+<span>    "name": "rabbitmq-url",</span>
+<span>    "target": "RABBITMQ_URL" }] },</span>
+<span>  "scaling": {</span>
+<span>    "mode": "keda",</span>
+<span>    "minReplicas": 0,</span>
+<span>    "metrics": [{ "type": "rabbitmq",</span>
+<span>      "sourceRef": "RABBITMQ_URL",</span>
+<span>      "queue": "jobs", "target": 10 }]</span>
+<span>  }</span>
+<span>}</span></code></pre>
+            <p>ה-root config מחזיק environments, targets ו-boundaries. אין בו רשימת applications כפולה.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="saved" aria-labelledby="saved-title">
+        <div class="section-intro compact-intro">
+          <p class="context">ה-setup ש-MonoX מוריד מהדרך</p>
+          <h2 id="saved-title">מה כבר לא צריך לחבר ידנית</h2>
+          <p>MonoX אורז את החלטות הפלטפורמה שחוזרות בכל פרויקט. החלטות המוצר עדיין נשארות אצלכם.</p>
+        </div>
+        <ol class="step-list">
+          <li>
+            <span>01</span>
+            <div>
+              <h3>Workspace setup</h3>
+              <p>Package manager, workspace globs, dependency direction ו-boundaries משותפים ל-agents.</p>
+            </div>
+          </li>
+          <li>
+            <span>02</span>
+            <div>
+              <h3>Local runtime</h3>
+              <p>
+                Health routes, קבצי Docker ושירותים שבחרתם, עם placeholders שחייבים למלא בקובץ local ignored.
+              </p>
+            </div>
+          </li>
+          <li>
+            <span>03</span>
+            <div>
+              <h3>Verification</h3>
+              <p>Immutable install, בדיקת lock, פקודות test ו-build בתוך ה-CI שנוצר.</p>
+            </div>
+          </li>
+          <li>
+            <span>04</span>
+            <div>
+              <h3>Delivery model</h3>
+              <p>Workloads typed, probes, limits, scaling signals ו-plan שמותאם ל-target.</p>
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      <section class="flow" aria-labelledby="flow-title">
+        <div class="section-intro">
+          <p class="context">מ-local עד production</p>
+          <h2 id="flow-title">ה-contract נשאר קבוע, ה-target מתחלף</h2>
+          <p>
+            ה-package מתאר את ה-workload. ה-target שבחרתם משלים image, namespace, domain, identity ו-secret
+            bindings.
+          </p>
+        </div>
+        <ol class="delivery-flow" aria-label="מסלול ה-delivery של MonoX">
+          <li>
+            <strong>Validate</strong><span>עוצר unknown fields, inline secrets ו-targets לא חד משמעיים.</span>
+          </li>
+          <li>
+            <strong>Explain</strong
+            ><span>מראה את ה-defaults, ה-profile, ה-environment וה-variant לפי הסדר.</span>
+          </li>
+          <li><strong>Plan</strong><span>קושר source, config, target state ו-adapter digests.</span></li>
+          <li>
+            <strong>Apply</strong
+            ><span>רץ דרך ה-local executor המובנה או transport שמחובר במפורש, ודוחה plan לא עדכני.</span>
+          </li>
+        </ol>
+        <pre class="flow-command" tabindex="0"><code><span>monox validate</span>
+<span>monox config explain @my-product/jobs --env staging</span>
+<span>monox plan --env staging --all --output .monox/plan.json</span>
+<span>monox apply --plan .monox/plan.json</span></code></pre>
+      </section>
+
+      <section class="responsibility" aria-labelledby="responsibility-title">
+        <h2 id="responsibility-title">MonoX מגדיר את הגבול. אתם אחראים למה שעובר דרכו.</h2>
+        <div>
+          <p>
+            אתם מספקים cloud access דרך OIDC או workload identity, בוחרים domains ו-managed services, מגדירים
+            budgets ו-capacity, מחברים external secrets ומאשרים שינויים ב-production.
+          </p>
+          <p>
+            MonoX לא מחליף cloud control plane, לא מבטיח capacity אצל ה-provider ולא מחביא פעולות destructive
+            בתוך deploy רגיל.
+          </p>
+        </div>
+      </section>
+
+      <section class="catalog" id="catalog" aria-labelledby="catalog-title">
+        <div class="section-intro">
+          <p class="context">הוכחות של 0.2 alpha</p>
+          <h2 id="catalog-title">מה כבר ממומש, מה guarded ומה עדיין מחכה ל-production proof</h2>
+          <p>הסטטוס מחובר לטסטים ב-repo הציבורי. Claims עתידיים נשארים בחוץ עד שיש להם הוכחה.</p>
+        </div>
+        <div class="capability-table-wrap" tabindex="0" aria-label="טבלת סטטוס capabilities">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Surface</th>
+                <th scope="col">סטטוס alpha</th>
+                <th scope="col">הוכחה</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Deployment contract v2</th>
+                <td><span class="status ready">ממומש</span></td>
+                <td>Package discovery, RFC 7396 overlays, variants ו-target binding יחיד</td>
+              </tr>
+              <tr>
+                <th scope="row">Workspace recipes</th>
+                <td><span class="status ready">Built in</span></td>
+                <td>Catalog ל-JavaScript, TypeScript, Python, PHP ו-Go עם deterministic locks</td>
+              </tr>
+              <tr>
+                <th scope="row">Local ו-container path</th>
+                <td><span class="status guarded">נבדק ב-source</span></td>
+                <td>
+                  Compose contracts ו-non-root defaults; runtime acceptance מלא לכל ה-add-ons עדיין פתוח
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">PM2, SSH, Coolify ו-Kubernetes</th>
+                <td><span class="status guarded">Guarded alpha</span></td>
+                <td>Typed plans ו-fail-closed transport injection לפני שינוי חיצוני</td>
+              </tr>
+              <tr>
+                <th scope="row">AWS ו-GCP provisioning</th>
+                <td><span class="status guarded">Plan only</span></td>
+                <td>Provider plans בגישת OIDC; apply אמיתי ב-sandbox עדיין release gate</td>
+              </tr>
+              <tr>
+                <th scope="row">Production reference</th>
+                <td><span class="status pending">עוד לא פומבי</span></td>
+                <td>
+                  42 contracts tracked עברו inventory; ה-case study מחכה ל-security cleanup ול-canary rollback
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <p>Copyright 2026 Moshe Harush and MonoX contributors. MIT licensed.</p>
+      <p>
+        <a href="https://github.com/Mosharush/MonoX">GitHub</a><span aria-hidden="true"> · </span
+        ><a href="https://www.npmjs.com/package/create-monox">npm</a><span aria-hidden="true"> · </span
+        ><a href="https://github.com/Mosharush/MonoX/tree/main/docs">Docs</a>
+      </p>
+    </footer>
+  </body>
+</html>

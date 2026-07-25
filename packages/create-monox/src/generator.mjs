@@ -2,22 +2,39 @@ import { spawn } from 'node:child_process';
 import { lstat, mkdir, readdir, writeFile } from 'node:fs/promises';
 import { isAbsolute, join, resolve } from 'node:path';
 
+import { expandAddonDependencies, renderAddonFiles, validateAddonsForEnvironment } from './addons.mjs';
+import {
+  ADDON_RECIPES,
+  DELIVERY_TARGETS,
+  WORKSPACE_RECIPES,
+  assertAddon,
+  assertDelivery,
+  assertWorkspaceTemplate,
+  catalogManifest,
+  integrityFor,
+} from './catalog.mjs';
+import { pythonModuleName, renderWorkspace, workspaceDirectory } from './templates.mjs';
+
+export const GENERATOR_VERSION = '0.2.0-alpha.1';
 export const PACKAGE_MANAGERS = Object.freeze(['yarn', 'npm', 'pnpm']);
 export const INFRA_OPTIONS = Object.freeze(['none', 'docker', 'kubernetes', 'all']);
+export const ENVIRONMENTS = Object.freeze(['development', 'preview', 'staging', 'production']);
 export const COREPACK_VERSION = '0.35.0';
 export const NODE_VERSION_RANGE = '>=22.22.2 <23.0.0 || >=24.15.0 <25.0.0 || >=26.0.0 <27.0.0';
 export const PACKAGE_MANAGER_VERSIONS = Object.freeze({
   yarn: 'yarn@4.9.1',
-  npm: 'npm@10.9.2',
+  npm: 'npm@12.0.1',
   pnpm: 'pnpm@10.13.1',
 });
-const LOCKFILE_NAMES = Object.freeze({
-  yarn: 'yarn.lock',
-  npm: 'package-lock.json',
-  pnpm: 'pnpm-lock.yaml',
-});
+export const DEFAULT_WORKSPACES = Object.freeze([
+  Object.freeze({ name: 'api', template: 'node-fastify-api' }),
+  Object.freeze({ name: 'web', template: 'react-vite-web' }),
+  Object.freeze({ name: 'shared', template: 'typescript-library' }),
+]);
 
+const LOCKFILE_NAMES = Object.freeze({ yarn: 'yarn.lock', npm: 'package-lock.json', pnpm: 'pnpm-lock.yaml' });
 const PROJECT_NAME_PATTERN = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
+const WORKSPACE_NAME_PATTERN = /^[a-z][a-z0-9-]{0,62}$/;
 
 export function validateProjectName(name) {
   if (typeof name !== 'string' || !PROJECT_NAME_PATTERN.test(name)) {
@@ -25,22 +42,28 @@ export function validateProjectName(name) {
       'Project name must use 1 to 63 lowercase letters, numbers, or hyphens, and must start and end with a letter or number.'
     );
   }
-
   return name;
 }
 
 export function resolveDestination({ cwd = process.cwd(), name, directory } = {}) {
   validateProjectName(name);
-
-  if (directory === undefined) {
-    return resolve(cwd, name);
-  }
-
-  if (typeof directory !== 'string' || directory.trim() === '') {
+  if (directory === undefined) return resolve(cwd, name);
+  if (typeof directory !== 'string' || directory.trim() === '')
     throw new Error('Directory must be a nonempty path.');
-  }
-
   return isAbsolute(directory) ? resolve(directory) : resolve(cwd, directory);
+}
+
+export function parseWorkspaceSelection(value) {
+  if (typeof value !== 'string') throw new Error('Workspace must use name=template syntax.');
+  const separator = value.indexOf('=');
+  if (separator <= 0 || separator === value.length - 1 || value.indexOf('=', separator + 1) !== -1) {
+    throw new Error('Workspace must use name=template syntax.');
+  }
+  const name = value.slice(0, separator);
+  const template = value.slice(separator + 1);
+  if (!WORKSPACE_NAME_PATTERN.test(name)) throw new Error(`Invalid workspace name: ${name}.`);
+  assertWorkspaceTemplate(template);
+  return Object.freeze({ name, template });
 }
 
 export async function runCommand(command, args, { cwd, env } = {}) {
@@ -50,14 +73,9 @@ export async function runCommand(command, args, { cwd, env } = {}) {
       env: env ? { ...process.env, ...env } : undefined,
       stdio: 'inherit',
     });
-
     child.once('error', rejectPromise);
     child.once('exit', (code, signal) => {
-      if (code === 0) {
-        resolvePromise();
-        return;
-      }
-
+      if (code === 0) return resolvePromise();
       const reason = signal ? `signal ${signal}` : `exit code ${code}`;
       rejectPromise(new Error(`${command} failed with ${reason}.`));
     });
@@ -68,65 +86,66 @@ export async function generateProject(options, dependencies = {}) {
   const normalized = normalizeOptions(options);
   const destination = resolveDestination(normalized);
   const execute = dependencies.runCommand ?? runCommand;
+  const files = createProjectFiles(normalized);
+
+  if (normalized.dryRun) return generationResult(normalized, destination, files, false, false);
 
   await prepareDestination(destination);
-
-  const files = createProjectFiles(normalized);
   for (const [relativePath, contents] of files) {
     const outputPath = join(destination, relativePath);
     await mkdir(resolve(outputPath, '..'), { recursive: true });
     await writeFile(outputPath, contents, { encoding: 'utf8', flag: 'wx' });
   }
 
-  if (normalized.git) {
-    await execute('git', ['init', '--initial-branch=main'], { cwd: destination });
-  }
-
+  if (normalized.git) await execute('git', ['init', '--initial-branch=main'], { cwd: destination });
   if (normalized.install) {
-    const invocation = installInvocation(normalized.packageManager);
+    const invocation = packageManagerInvocation(normalized.packageManager, ['install']);
     await execute(invocation.command, invocation.args, {
       cwd: destination,
       ...(invocation.env ? { env: invocation.env } : {}),
     });
   }
 
+  return generationResult(normalized, destination, files, normalized.git, normalized.install);
+}
+
+export function createGenerationPlan(options) {
+  const normalized = normalizeOptions({ ...options, dryRun: true });
+  const destination = resolveDestination(normalized);
+  const files = createProjectFiles(normalized);
+  return generationResult(normalized, destination, files, false, false);
+}
+
+function generationResult(options, destination, files, gitInitialized, installed) {
   return Object.freeze({
-    name: normalized.name,
+    name: options.name,
     directory: destination,
-    packageManager: normalized.packageManager,
-    infra: normalized.infra,
+    packageManager: options.packageManager,
+    infra: options.infra,
+    environment: options.environment,
+    delivery: options.delivery,
+    workspaces: Object.freeze(options.workspaces.map((item) => Object.freeze({ ...item }))),
+    addons: Object.freeze([...options.addons]),
     files: Object.freeze([...files.keys()]),
-    gitInitialized: normalized.git,
-    installed: normalized.install,
+    fileDigests: Object.freeze(
+      Object.fromEntries([...files].map(([path, contents]) => [path, integrityFor(contents)]))
+    ),
+    dryRun: options.dryRun,
+    gitInitialized,
+    installed,
   });
 }
 
-function installInvocation(packageManager) {
-  return packageManagerInvocation(packageManager, ['install']);
-}
-
 export function packageManagerInvocation(packageManager, args = []) {
-  if (!PACKAGE_MANAGERS.includes(packageManager)) {
+  if (!PACKAGE_MANAGERS.includes(packageManager))
     throw new Error(`Package manager must be one of: ${PACKAGE_MANAGERS.join(', ')}.`);
-  }
-
-  if (packageManager === 'npm') {
-    return {
-      command: 'npx',
-      args: ['--yes', PACKAGE_MANAGER_VERSIONS.npm, ...args],
-    };
-  }
-
+  if (packageManager === 'npm')
+    return { command: 'npx', args: ['--yes', PACKAGE_MANAGER_VERSIONS.npm, ...args] };
   return {
     command: 'npx',
     args: ['--yes', `corepack@${COREPACK_VERSION}`, packageManager, ...args],
     ...(packageManager === 'yarn'
-      ? {
-          env: {
-            YARN_ENABLE_HARDENED_MODE: '0',
-            YARN_ENABLE_IMMUTABLE_INSTALLS: 'false',
-          },
-        }
+      ? { env: { YARN_ENABLE_HARDENED_MODE: '0', YARN_ENABLE_IMMUTABLE_INSTALLS: 'false' } }
       : {}),
   };
 }
@@ -136,54 +155,162 @@ export function packageManagerShellCommand(packageManager, args = []) {
   return [invocation.command, ...invocation.args].join(' ');
 }
 
-function normalizeOptions(options = {}) {
-  if (options === null || typeof options !== 'object') {
+export function normalizeOptions(options = {}) {
+  if (options === null || typeof options !== 'object' || Array.isArray(options))
     throw new Error('Generator options must be an object.');
-  }
-
   const name = validateProjectName(options.name);
   const packageManager = options.packageManager ?? 'yarn';
-  const infra = options.infra ?? 'all';
-
-  if (!PACKAGE_MANAGERS.includes(packageManager)) {
+  if (!PACKAGE_MANAGERS.includes(packageManager))
     throw new Error(`Package manager must be one of: ${PACKAGE_MANAGERS.join(', ')}.`);
-  }
 
-  if (!INFRA_OPTIONS.includes(infra)) {
+  const workspaces = normalizeWorkspaces(options.workspaces);
+  const environment = options.environment ?? 'development';
+  if (!ENVIRONMENTS.includes(environment))
+    throw new Error(`Environment must be one of: ${ENVIRONMENTS.join(', ')}.`);
+  const addons = expandAddonDependencies(normalizeAddonIds(options.addons));
+  validateAddonsForEnvironment(addons, environment);
+
+  const deliveryWasSelected = options.delivery !== undefined;
+  const delivery = options.delivery ?? defaultDelivery(options.infra);
+  const deliveryDefinition = assertDelivery(delivery);
+  const infra = options.infra ?? (deliveryWasSelected ? infraForDelivery(deliveryDefinition) : 'all');
+  if (!INFRA_OPTIONS.includes(infra))
     throw new Error(`Infrastructure must be one of: ${INFRA_OPTIONS.join(', ')}.`);
-  }
+  validateDeliveryCompatibility({ infra, delivery, deliveryDefinition, workspaces, addons });
+  validateProductionGeneration({ environment, deliveryDefinition, workspaces, addons });
 
-  return {
+  return Object.freeze({
     name,
     cwd: options.cwd ?? process.cwd(),
     directory: options.directory,
     packageManager,
     infra,
+    environment,
+    delivery,
+    deliveryDefinition,
+    workspaces,
+    addons,
     git: options.git ?? true,
     install: options.install ?? false,
-  };
+    dryRun: options.dryRun ?? false,
+  });
+}
+
+function normalizeWorkspaces(input) {
+  const values =
+    input === undefined
+      ? DEFAULT_WORKSPACES
+      : !Array.isArray(input) && input && typeof input === 'object'
+        ? Object.entries(input).map(([name, template]) => ({ name, template }))
+        : input;
+  if (!Array.isArray(values) || values.length === 0) throw new Error('At least one workspace is required.');
+  const seen = new Set();
+  return Object.freeze(
+    values.map((value) => {
+      const selection =
+        typeof value === 'string' ? parseWorkspaceSelection(value) : normalizeWorkspaceObject(value);
+      if (seen.has(selection.name)) throw new Error(`Workspace names must be unique: ${selection.name}.`);
+      seen.add(selection.name);
+      return selection;
+    })
+  );
+}
+
+function normalizeWorkspaceObject(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value))
+    throw new Error('Workspace entries must be name=template strings or objects.');
+  return parseWorkspaceSelection(`${value.name ?? ''}=${value.template ?? ''}`);
+}
+
+function normalizeAddonIds(input) {
+  if (input === undefined) return [];
+  if (!Array.isArray(input)) throw new Error('Add-ons must be an array.');
+  const unique = [];
+  const seen = new Set();
+  for (const id of input) {
+    if (typeof id !== 'string') throw new Error('Add-on IDs must be strings.');
+    assertAddon(id);
+    if (!seen.has(id)) unique.push(id);
+    seen.add(id);
+  }
+  return unique;
+}
+
+function defaultDelivery(infra) {
+  if (infra === 'kubernetes') return 'kubernetes:existing-kubernetes';
+  return 'docker:local';
+}
+
+function infraForDelivery(delivery) {
+  if (delivery.runtime === 'kubernetes') return 'kubernetes';
+  if (delivery.runtime === 'docker' || delivery.runtime === 'coolify') return 'docker';
+  return 'none';
+}
+
+function validateDeliveryCompatibility({ infra, delivery, deliveryDefinition, workspaces, addons }) {
+  if (deliveryDefinition.runtime === 'docker' && deliveryDefinition.transport !== 'local') {
+    throw new Error(
+      `Delivery ${delivery} is cataloged for 0.2.0-alpha.2 but is not executable in 0.2.0-alpha.1. ` +
+        'Use docker:local, or select PM2, Coolify or Kubernetes with an explicitly configured adapter.'
+    );
+  }
+  if (deliveryDefinition.runtime === 'kubernetes' && !['kubernetes', 'all'].includes(infra)) {
+    throw new Error(`Delivery ${delivery} requires kubernetes or all infrastructure.`);
+  }
+  if (deliveryDefinition.runtime === 'docker' && !['none', 'docker', 'all'].includes(infra)) {
+    throw new Error(`Delivery ${delivery} requires docker or all infrastructure.`);
+  }
+  const hasKubernetesAddon = addons.some((id) => ADDON_RECIPES[id].kubernetes);
+  if (hasKubernetesAddon && !['kubernetes', 'all'].includes(infra)) {
+    throw new Error('Kubernetes add-ons require kubernetes or all infrastructure.');
+  }
+  const deployableKinds = workspaces
+    .map((item) => WORKSPACE_RECIPES[item.template].kind)
+    .filter((kind) => kind !== 'library');
+  if (deliveryDefinition.runtime === 'static' && deployableKinds.some((kind) => kind !== 'static')) {
+    throw new Error('Static delivery supports only static workspaces.');
+  }
+  if (deliveryDefinition.runtime === 'pm2' && deployableKinds.includes('static')) {
+    throw new Error(
+      'PM2 delivery does not serve static workspace artifacts; select docker, coolify, kubernetes, or static delivery.'
+    );
+  }
+}
+
+function validateProductionGeneration({ environment, deliveryDefinition, workspaces, addons }) {
+  if (environment !== 'production') return;
+
+  const unverifiedAddon = addons.find(
+    (id) => ADDON_RECIPES[id].kubernetes && ADDON_RECIPES[id].install?.status !== 'verified'
+  );
+  if (unverifiedAddon) {
+    throw new Error(
+      `Production generation rejects ${unverifiedAddon}: its OCI chart coordinate and digest are not verified.`
+    );
+  }
+  if (deliveryDefinition.transport === 'local') {
+    throw new Error(
+      'Production generation rejects local delivery because no protected CI/OIDC identity is bound.'
+    );
+  }
+  if (workspaces.some((item) => WORKSPACE_RECIPES[item.template].kind !== 'library')) {
+    throw new Error(
+      'Production generation requires target-derived, digest-pinned workload images and a protected CI/OIDC identity. Use staging as the generator default, then bind verified production artifacts during planning.'
+    );
+  }
 }
 
 async function prepareDestination(destination) {
   let entry;
-
   try {
     entry = await lstat(destination);
   } catch (error) {
-    if (error?.code !== 'ENOENT') {
-      throw error;
-    }
+    if (error?.code !== 'ENOENT') throw error;
   }
-
   if (entry) {
-    if (entry.isSymbolicLink() || !entry.isDirectory()) {
+    if (entry.isSymbolicLink() || !entry.isDirectory())
       throw new Error(`Destination is not a directory: ${destination}`);
-    }
-
-    const contents = await readdir(destination);
-    if (contents.length > 0) {
-      throw new Error(`Destination is not empty: ${destination}`);
-    }
+    if ((await readdir(destination)).length > 0) throw new Error(`Destination is not empty: ${destination}`);
   } else {
     await mkdir(destination, { recursive: true });
   }
@@ -193,664 +320,337 @@ function createProjectFiles(options) {
   const files = new Map([
     ['package.json', json(rootPackage(options))],
     ['monox.config.json', json(monoxConfig(options))],
+    ['monox.lock', json(monoxLock(options))],
     ['AGENTS.md', agentsGuide(options)],
     ['README.md', projectReadme(options)],
     ['.gitignore', gitignore()],
     ['.editorconfig', editorConfig()],
     ['.github/workflows/ci.yml', ciWorkflow(options)],
-    ['apps/api/package.json', json(apiPackage(options))],
-    ['apps/api/src/server.mjs', apiServer(options)],
-    ['apps/web/package.json', json(webPackage(options))],
-    ['apps/web/src/server.mjs', webServer(options)],
-    ['packages/shared/package.json', json(sharedPackage(options))],
-    ['packages/shared/src/index.mjs', sharedModule(options)],
-    ['test/smoke.test.mjs', smokeTest()],
+    ['scripts/verify-monox-lock.mjs', lockVerifier()],
+    ['test/generated.test.mjs', smokeTest(options)],
   ]);
 
-  if (options.packageManager === 'pnpm') {
+  for (const selection of options.workspaces) {
+    for (const [path, contents] of renderWorkspace(selection, options)) files.set(path, contents);
+  }
+  for (const [path, contents] of renderAddonFiles(options.addons)) files.set(path, contents);
+  if (options.workspaces.some((workspace) => workspace.template === 'python-django-api')) {
+    files.set('.env.example', `${files.get('.env.example') ?? ''}DJANGO_SECRET_KEY=\n`);
+  }
+
+  if (options.packageManager === 'pnpm')
     files.set('pnpm-workspace.yaml', "packages:\n  - 'apps/*'\n  - 'packages/*'\n");
-  }
-
-  if (options.packageManager === 'yarn') {
-    files.set('.yarnrc.yml', 'nodeLinker: node-modules\n');
-  }
-
+  if (options.packageManager === 'yarn') files.set('.yarnrc.yml', 'nodeLinker: node-modules\n');
   if (options.infra === 'docker' || options.infra === 'all') {
-    for (const [path, contents] of dockerFiles(options)) {
-      files.set(path, contents);
-    }
+    for (const [path, contents] of dockerFiles(options)) files.set(path, contents);
   }
-
   if (options.infra === 'kubernetes' || options.infra === 'all') {
-    for (const [path, contents] of kubernetesFiles(options)) {
-      files.set(path, contents);
-    }
+    for (const [path, contents] of kubernetesFiles(options)) files.set(path, contents);
   }
-
   return files;
 }
 
-function rootPackage({ name, packageManager }) {
+function rootPackage(options) {
+  const scripts = {
+    test: 'node --test test/generated.test.mjs',
+    'catalog:verify': 'node scripts/verify-monox-lock.mjs',
+  };
+  const buildScripts = [];
+  const testScripts = [];
+  const bootstrapScripts = [];
+  for (const workspace of options.workspaces) {
+    const definition = WORKSPACE_RECIPES[workspace.template];
+    if (definition.kind !== 'library')
+      scripts[`start:${workspace.name}`] = workspaceScript(options, workspace.name, 'start');
+    scripts[`test:${workspace.name}`] = workspaceScript(options, workspace.name, 'test');
+    if (
+      definition.family === 'javascript' ||
+      definition.language === 'go' ||
+      definition.language === 'python' ||
+      definition.language === 'php'
+    ) {
+      scripts[`build:${workspace.name}`] = workspaceScript(options, workspace.name, 'build');
+      buildScripts.push(
+        packageManagerShellCommand(options.packageManager, ['run', `build:${workspace.name}`])
+      );
+    }
+    testScripts.push(packageManagerShellCommand(options.packageManager, ['run', `test:${workspace.name}`]));
+    if (definition.family !== 'javascript') {
+      scripts[`bootstrap:${workspace.name}`] = workspaceScript(options, workspace.name, 'bootstrap');
+      bootstrapScripts.push(
+        packageManagerShellCommand(options.packageManager, ['run', `bootstrap:${workspace.name}`])
+      );
+    }
+  }
+  scripts.build = buildScripts.join(' && ');
+  scripts['test:workspaces'] = testScripts.join(' && ');
+  if (bootstrapScripts.length > 0) scripts['bootstrap:toolchains'] = bootstrapScripts.join(' && ');
   return {
-    name,
+    name: options.name,
     version: '0.1.0',
     private: true,
     type: 'module',
-    packageManager: PACKAGE_MANAGER_VERSIONS[packageManager],
+    packageManager: PACKAGE_MANAGER_VERSIONS[options.packageManager],
     engines: { node: NODE_VERSION_RANGE },
     workspaces: ['apps/*', 'packages/*'],
-    scripts: {
-      'dev:api': 'node --watch apps/api/src/server.mjs',
-      'dev:web': 'node --watch apps/web/src/server.mjs',
-      'start:api': 'node apps/api/src/server.mjs',
-      'start:web': 'node apps/web/src/server.mjs',
-      test: 'node --test',
-    },
+    scripts,
   };
 }
 
-function apiPackage({ name, packageManager }) {
-  return {
-    name: `@${name}/api`,
-    version: '0.1.0',
-    private: true,
-    type: 'module',
-    scripts: {
-      dev: 'node --watch src/server.mjs',
-      start: 'node src/server.mjs',
-    },
-    dependencies: {
-      [`@${name}/shared`]: workspaceDependencyRange(packageManager),
-    },
-  };
+function workspaceScript(options, workspace, script) {
+  const name = `@${options.name}/${workspace}`;
+  if (options.packageManager === 'npm') {
+    return packageManagerShellCommand('npm', ['run', script, '--workspace', name]);
+  }
+  if (options.packageManager === 'pnpm') {
+    return packageManagerShellCommand('pnpm', ['--filter', name, 'run', script]);
+  }
+  return packageManagerShellCommand('yarn', ['workspace', name, 'run', script]);
 }
 
-function webPackage({ name, packageManager }) {
+function monoxConfig(options) {
+  const targetId = targetIdFor(options.delivery);
   return {
-    name: `@${name}/web`,
-    version: '0.1.0',
-    private: true,
-    type: 'module',
-    scripts: {
-      dev: 'node --watch src/server.mjs',
-      start: 'node src/server.mjs',
-    },
-    dependencies: {
-      [`@${name}/shared`]: workspaceDependencyRange(packageManager),
-    },
-  };
-}
-
-function workspaceDependencyRange(packageManager) {
-  return packageManager === 'pnpm' ? 'workspace:*' : '*';
-}
-
-function sharedPackage({ name }) {
-  return {
-    name: `@${name}/shared`,
-    version: '0.1.0',
-    private: true,
-    type: 'module',
-    exports: './src/index.mjs',
-  };
-}
-
-function monoxConfig({ name, packageManager, infra }) {
-  return {
-    schemaVersion: 1,
-    name,
-    packageManager,
-    workspaces: {
-      applications: ['apps/api', 'apps/web'],
-      packages: ['packages/shared'],
-    },
-    infrastructure: {
-      preset: infra,
-      docker: infra === 'docker' || infra === 'all',
-      kubernetes: infra === 'kubernetes' || infra === 'all',
+    schemaVersion: '2',
+    project: {
+      name: options.name,
+      workspaceGlobs: ['apps/*', 'packages/*'],
+      defaultEnvironment: options.environment,
     },
     boundaries: {
-      api: ['packages/shared'],
-      web: ['packages/shared'],
-      shared: [],
+      apps: ['packages'],
+      packages: ['packages'],
+      infra: ['packages'],
+    },
+    workloadProfiles: {},
+    environments: {
+      development: {
+        production: false,
+        bindings: [{ target: targetId, selector: { workloads: ['*'] } }],
+      },
+      preview: {
+        production: false,
+        bindings: [{ target: targetId, selector: { workloads: ['*'] } }],
+      },
+      staging: {
+        production: false,
+        bindings: [{ target: targetId, selector: { workloads: ['*'] } }],
+      },
+      production: {
+        production: true,
+        protected: true,
+        bindings: [{ target: targetId, selector: { workloads: ['*'] } }],
+      },
+    },
+    targets: {
+      [targetId]: { ...options.deliveryDefinition },
+    },
+    addons: Object.fromEntries(
+      options.addons.map((id) => [
+        id,
+        {
+          recipe: id,
+          enabled: true,
+          mode: 'bundled',
+          environments: ['development', 'preview'],
+          config: {},
+          secretRefs: [],
+        },
+      ])
+    ),
+  };
+}
+
+function targetIdFor(delivery) {
+  return delivery.replace(':', '-').replaceAll(/[^a-z0-9-]/g, '-');
+}
+
+function monoxLock(options) {
+  const catalog = catalogManifest();
+  const selection = {
+    workspaces: options.workspaces.map(({ name, template }) => ({
+      name,
+      template,
+      ...catalog.workspaces[template],
+    })),
+    addons: options.addons.map((id) => ({ id, ...catalog.addons[id] })),
+    delivery: {
+      id: options.delivery,
+      integrity: integrityFor({ id: options.delivery, ...DELIVERY_TARGETS[options.delivery] }),
     },
   };
-}
-
-function apiServer({ name }) {
-  return `import { createServer } from 'node:http';
-import { createHealthPayload } from '@${name}/shared';
-
-const port = Number.parseInt(process.env.PORT ?? '3001', 10);
-
-const server = createServer((request, response) => {
-  if (request.method === 'GET' && request.url === '/health') {
-    response.writeHead(200, { 'content-type': 'application/json; charset=utf-8' });
-    response.end(JSON.stringify(createHealthPayload('api')));
-    return;
-  }
-
-  response.writeHead(404, { 'content-type': 'application/json; charset=utf-8' });
-  response.end(JSON.stringify({ error: 'not_found' }));
-});
-
-server.listen(port, () => {
-  console.log(\`API listening on port \${port}\`);
-});
-`;
-}
-
-function webServer({ name }) {
-  return `import { createServer } from 'node:http';
-import { projectName } from '@${name}/shared';
-
-const port = Number.parseInt(process.env.PORT ?? '3000', 10);
-
-const server = createServer((request, response) => {
-  if (request.method !== 'GET' || request.url !== '/') {
-    response.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
-    response.end('Not found');
-    return;
-  }
-
-  response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-  response.end(\`<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>\${projectName}</title>
-  </head>
-  <body>
-    <main>
-      <h1>\${projectName}</h1>
-      <p>Your MonoX workspace is ready.</p>
-    </main>
-  </body>
-</html>\`);
-});
-
-server.listen(port, () => {
-  console.log(\`Web app listening on port \${port}\`);
-});
-`;
-}
-
-function sharedModule({ name }) {
-  return `export const projectName = '${name}';
-
-export function createHealthPayload(service) {
-  if (typeof service !== 'string' || service.length === 0) {
-    throw new TypeError('service must be a nonempty string');
-  }
-
   return {
-    service,
-    status: 'ok',
+    lockfileVersion: 1,
+    generator: { name: 'create-monox', version: GENERATOR_VERSION },
+    catalog: { version: catalog.version, integrity: catalog.integrity },
+    selection,
+    selectionIntegrity: integrityFor(selection),
   };
 }
-`;
+
+function projectReadme(options) {
+  const install = packageManagerShellCommand(options.packageManager, ['install']);
+  const bootstrap = options.workspaces.some(
+    (workspace) => WORKSPACE_RECIPES[workspace.template].family !== 'javascript'
+  )
+    ? `${packageManagerShellCommand(options.packageManager, ['run', 'bootstrap:toolchains'])}\n`
+    : '';
+  const starts = options.workspaces
+    .filter((workspace) => WORKSPACE_RECIPES[workspace.template].kind !== 'library')
+    .map((workspace) =>
+      packageManagerShellCommand(options.packageManager, ['run', `start:${workspace.name}`])
+    );
+  return `# ${options.name}\n\nGenerated by MonoX from bundled, versioned recipes. The project contains ${options.workspaces.length} workspace(s), ${options.addons.length} add-on(s), CI, explicit agent boundaries and a \`${options.delivery}\` delivery contract.\n\n## Start\n\n\`\`\`sh\n${install}\n${bootstrap}${starts.join('\n')}\n\`\`\`\n\nRun one start command per terminal. Polyglot workspaces require the tool named in their local README. The bootstrap command creates their \`uv.lock\`, \`composer.lock\` or \`go.sum\` state before container builds.\n\n## Verify\n\n\`\`\`sh\n${packageManagerShellCommand(options.packageManager, ['run', 'catalog:verify'])}\n${packageManagerShellCommand(options.packageManager, ['test'])}\n${packageManagerShellCommand(options.packageManager, ['run', 'test:workspaces'])}\n${packageManagerShellCommand(options.packageManager, ['run', 'build'])}\n\`\`\`\n\n\`package.json.deployment\` is the source of truth for every runnable workspace. \`monox.config.json\` owns project boundaries, environments, targets and add-ons; it does not duplicate an application list.\n\nDo not commit \`.env\`, credentials, provider account identifiers or private endpoints.\n`;
 }
 
-function smokeTest() {
-  return `import assert from 'node:assert/strict';
-import test from 'node:test';
-import { createHealthPayload } from '../packages/shared/src/index.mjs';
-
-test('shared health payload has a stable contract', () => {
-  assert.deepEqual(createHealthPayload('test'), {
-    service: 'test',
-    status: 'ok',
-  });
-});
-`;
+function agentsGuide(options) {
+  const rows = options.workspaces
+    .map((workspace) => `- \`${workspaceDirectory(workspace)}\`: \`${workspace.template}\`.`)
+    .join('\n');
+  return `# AGENTS.md\n\n## Mission\n\nKeep ${options.name} composable, deterministic and safe to deliver. Prefer explicit contracts over hidden conventions.\n\n## Workspace map\n\n${rows}\n\nApps may depend on packages. Packages must never import from apps. Update a runnable workspace's \`package.json.deployment\` when its runtime contract changes. Root config owns targets and boundaries only.\n\n## Required checks\n\n1. Run \`node --test\`.\n2. Run \`node scripts/verify-monox-lock.mjs\`.\n3. Never place credentials in manifests, command arguments, logs or fixtures.\n4. Review generated infrastructure before production use.\n`;
 }
 
-function agentsGuide({ name, infra }) {
-  return `# AGENTS.md
-
-## Mission
-
-Keep ${name} small, composable, and safe to change. Prefer reusable modules, explicit boundaries, and simple delivery paths.
-
-## Workspace boundaries
-
-- \`apps/api\` owns HTTP API behavior.
-- \`apps/web\` owns browser-facing delivery.
-- \`packages/shared\` contains dependency-free contracts and utilities used by more than one app.
-- \`infra\` contains ${infra === 'none' ? 'no generated templates in this preset' : `${infra} deployment templates`} and must not contain application business logic.
-
-Apps may depend on shared packages. Shared packages must not import from apps. Keep code DRY only when an abstraction has at least two real consumers.
-
-## Delivery rules
-
-1. Run \`${testCommandForGuide()}\` before delivery.
-2. Keep credentials, tokens, and private endpoints outside the repository.
-3. Prefer environment variables for runtime configuration.
-4. Update \`monox.config.json\` when workspace ownership changes.
-5. Keep infrastructure templates generic and review resource limits before production use.
-`;
-}
-
-function testCommandForGuide() {
-  return 'node --test';
-}
-
-function projectReadme({ name, packageManager, infra }) {
-  const install = packageManagerShellCommand(packageManager, ['install']);
-  const devApi = packageManagerShellCommand(packageManager, ['run', 'dev:api']);
-  const devWeb = packageManagerShellCommand(packageManager, ['run', 'dev:web']);
-  const test = packageManagerShellCommand(packageManager, ['test']);
-  const lockfile = LOCKFILE_NAMES[packageManager];
-
-  return `# ${name}
-
-A small MonoX workspace with an API, a web app, shared code, CI, and ${infra === 'none' ? 'no generated infrastructure preset' : `${infra} infrastructure templates`}.
-
-## Start
-
-\`\`\`sh
-${install}
-${devApi}
-${devWeb}
-\`\`\`
-
-The API uses port \`3001\` and exposes \`GET /health\`. The web app uses port \`3000\`. Override either port with the \`PORT\` environment variable.
-
-The install creates \`${lockfile}\`. Commit it before pushing because generated CI and Docker builds require frozen or immutable dependency resolution.
-
-## Verify
-
-\`\`\`sh
-${test}
-\`\`\`
-
-Read \`AGENTS.md\` before changing workspace boundaries or infrastructure.
-`;
-}
-
-function ciWorkflow({ packageManager }) {
-  const lockfile = LOCKFILE_NAMES[packageManager];
-  const installCommand = {
+function ciWorkflow(options) {
+  const lockfile = LOCKFILE_NAMES[options.packageManager];
+  const install = {
     yarn: packageManagerShellCommand('yarn', ['install', '--immutable']),
     npm: packageManagerShellCommand('npm', ['ci']),
     pnpm: packageManagerShellCommand('pnpm', ['install', '--frozen-lockfile']),
-  }[packageManager];
-  const testCommand = packageManagerShellCommand(packageManager, ['test']);
-
-  return `name: CI
-
-on:
-  pull_request:
-  push:
-    branches:
-      - main
-
-permissions:
-  contents: read
-
-jobs:
-  test:
-    name: Test (Node \${{ matrix.node }})
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        node:
-          - 22
-          - 24
-          - 26
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: \${{ matrix.node }}
-      - name: Require committed ${lockfile}
-        shell: bash
-        run: |
-          if [[ ! -f "${lockfile}" ]]; then
-            echo "Run ${packageManagerShellCommand(packageManager, ['install'])} and commit ${lockfile} before enabling CI." >&2
-            exit 1
-          fi
-      - run: ${installCommand}
-      - run: ${testCommand}
-`;
+  }[options.packageManager];
+  const hasPython = options.workspaces.some(
+    (workspace) => WORKSPACE_RECIPES[workspace.template].family === 'python'
+  );
+  const hasGo = options.workspaces.some((workspace) => WORKSPACE_RECIPES[workspace.template].family === 'go');
+  const hasPhp = options.workspaces.some(
+    (workspace) => WORKSPACE_RECIPES[workspace.template].family === 'php'
+  );
+  const hasPolyglot = options.workspaces.some(
+    (workspace) => WORKSPACE_RECIPES[workspace.template].family !== 'javascript'
+  );
+  const goSetup = hasGo
+    ? '      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0\n        with:\n          go-version: 1.25.3\n          cache: false\n'
+    : '';
+  const phpSetup = hasPhp
+    ? "      - uses: shivammathur/setup-php@44454db4f0199b8b9685a5d763dc37cbf79108e1 # 2.36.0\n        with:\n          php-version: '8.4'\n          tools: composer:2.8.12\n          coverage: none\n"
+    : '';
+  const pythonSetup = hasPython
+    ? '      - run: python3 -m pip install --disable-pip-version-check uv==0.9.7\n      - run: uv python install 3.13.9\n'
+    : '';
+  const bootstrap = hasPolyglot
+    ? `      - run: ${packageManagerShellCommand(options.packageManager, ['run', 'bootstrap:toolchains'])}\n`
+    : '';
+  return `name: CI\n\non:\n  pull_request:\n  push:\n    branches: [main]\n\npermissions:\n  contents: read\n\njobs:\n  test:\n    runs-on: ubuntu-latest\n    strategy:\n      fail-fast: false\n      matrix:\n        node: [22, 24, 26]\n    steps:\n      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n        with:\n          persist-credentials: false\n      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0\n        with:\n          node-version: \${{ matrix.node }}\n      - name: Require committed ${lockfile}\n        run: test -f ${lockfile}\n${goSetup}${phpSetup}      - run: ${install}\n${pythonSetup}${bootstrap}      - run: node scripts/verify-monox-lock.mjs\n      - run: ${packageManagerShellCommand(options.packageManager, ['test'])}\n      - run: ${packageManagerShellCommand(options.packageManager, ['run', 'test:workspaces'])}\n      - run: ${packageManagerShellCommand(options.packageManager, ['run', 'build'])}\n`;
 }
 
-function dockerFiles({ name, packageManager }) {
-  const lockfile = LOCKFILE_NAMES[packageManager];
-  const installCommand = {
-    npm: `RUN ${packageManagerShellCommand('npm', ['ci'])}`,
-    yarn: `RUN ${packageManagerShellCommand('yarn', ['install', '--immutable'])}`,
-    pnpm: `RUN ${packageManagerShellCommand('pnpm', ['install', '--frozen-lockfile'])}`,
-  }[packageManager];
+function lockVerifier() {
+  return `import assert from 'node:assert/strict';\nimport { createHash } from 'node:crypto';\nimport { readFile } from 'node:fs/promises';\n\nfunction canonical(value) {\n  if (Array.isArray(value)) return \`[\${value.map(canonical).join(',')}]\`;\n  if (value && typeof value === 'object') return \`{\${Object.keys(value).sort().map((key) => \`\${JSON.stringify(key)}:\${canonical(value[key])}\`).join(',')}}\`;\n  return JSON.stringify(value);\n}\nconst lock = JSON.parse(await readFile(new URL('../monox.lock', import.meta.url), 'utf8'));\nconst actual = \`sha256-\${createHash('sha256').update(canonical(lock.selection)).digest('base64')}\`;\nassert.equal(lock.lockfileVersion, 1);\nassert.equal(actual, lock.selectionIntegrity, 'monox.lock selection was changed without regeneration');\nconsole.log('MonoX lock verified');\n`;
+}
 
-  const base = `FROM node:22.23.1-bookworm-slim@sha256:6c74791e557ce11fc957704f6d4fe134a7bc8d6f5ca4403205b2966bd488f6b3
-WORKDIR /workspace
-COPY . .
-RUN test -f ${lockfile} || (echo "Missing ${lockfile}; run ${packageManagerShellCommand(packageManager, ['install'])} and commit it before building." >&2; exit 1)
-${installCommand}
-ENV NODE_ENV=production
-`;
+function smokeTest(options) {
+  const expected = options.workspaces.map((item) => workspaceDirectory(item));
+  return `import assert from 'node:assert/strict';\nimport { readFile } from 'node:fs/promises';\nimport test from 'node:test';\n\ntest('generated workspaces have deterministic package manifests', async () => {\n  const paths = ${JSON.stringify(expected)};\n  for (const path of paths) {\n    const manifest = JSON.parse(await readFile(new URL(\`../\${path}/package.json\`, import.meta.url), 'utf8'));\n    assert.equal(manifest.private, true);\n    if (manifest.deployment) assert.equal(manifest.deployment.schemaVersion, '2');\n  }\n});\n`;
+}
 
-  return new Map([
-    ['.dockerignore', 'node_modules\n.git\n.env\n*.log\ncoverage\n'],
+function dockerFiles(options) {
+  const services = options.workspaces
+    .filter((workspace) => WORKSPACE_RECIPES[workspace.template].kind !== 'library')
+    .map((workspace) => {
+      const definition = WORKSPACE_RECIPES[workspace.template];
+      const port = definition.port;
+      const environment =
+        workspace.template === 'python-django-api'
+          ? '    environment:\n      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Set DJANGO_SECRET_KEY}\n'
+          : '';
+      return `  ${workspace.name}:\n    build:\n      context: ../..\n      dockerfile: infra/docker/${workspace.name}.Dockerfile\n    init: true\n    read_only: true\n    tmpfs: [/tmp]\n    cap_drop: [ALL]\n    security_opt: [no-new-privileges:true]\n${environment}${port ? `    ports: ["127.0.0.1:${port}:${port}"]\n` : ''}`;
+    })
+    .join('');
+  const files = new Map([
+    ['.dockerignore', 'node_modules\n.git\n.env\n*.log\ncoverage\ndist\n'],
+    ['infra/local/docker-compose.yml', `name: ${options.name}\nservices:\n${services}`],
     [
-      'infra/docker/api.Dockerfile',
-      `${base}ENV PORT=3001
-EXPOSE 3001
-USER 10001:10001
-HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 CMD ["node", "-e", "fetch('http://127.0.0.1:3001/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
-CMD ["node", "apps/api/src/server.mjs"]
-`,
-    ],
-    [
-      'infra/docker/web.Dockerfile',
-      `${base}ENV PORT=3000
-EXPOSE 3000
-USER 10001:10001
-HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 CMD ["node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
-CMD ["node", "apps/web/src/server.mjs"]
-`,
-    ],
-    [
-      'infra/docker/compose.yaml',
-      `services:
-  api:
-    build:
-      context: ../..
-      dockerfile: infra/docker/api.Dockerfile
-    ports:
-      - "3001:3001"
-    init: true
-    read_only: true
-    tmpfs:
-      - /tmp:size=64m,mode=1777
-    cap_drop: [ALL]
-    security_opt: [no-new-privileges:true]
-  web:
-    build:
-      context: ../..
-      dockerfile: infra/docker/web.Dockerfile
-    ports:
-      - "3000:3000"
-    depends_on:
-      - api
-    init: true
-    read_only: true
-    tmpfs:
-      - /tmp:size=64m,mode=1777
-    cap_drop: [ALL]
-    security_opt: [no-new-privileges:true]
-`,
-    ],
-    [
-      'infra/docker/README.md',
-      `# Docker
-
-Build and start the ${name} services from the repository root:
-
-\`\`\`sh
-docker compose -f infra/docker/compose.yaml up --build
-\`\`\`
-
-The templates do not include credentials or production routing.
-`,
+      'infra/local/README.md',
+      '# Local Docker\n\nRun `docker compose -f infra/local/docker-compose.yml up --build`. Generated add-ons live in `infra/docker/addons.compose.yaml` and can be included with a second `-f` flag. All published ports bind to loopback by default.\n',
     ],
   ]);
+  for (const workspace of options.workspaces) {
+    if (WORKSPACE_RECIPES[workspace.template].kind === 'library') continue;
+    files.set(`infra/docker/${workspace.name}.Dockerfile`, dockerfileFor(options, workspace));
+  }
+  return files;
 }
 
-function kubernetesFiles({ name }) {
-  const workloads = `apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: ${name}-api
-spec:
-  replicas: 2
-  revisionHistoryLimit: 3
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: ${name}
-      app.kubernetes.io/component: api
-  template:
-    metadata:
-      labels:
-        app.kubernetes.io/name: ${name}
-        app.kubernetes.io/component: api
-    spec:
-      automountServiceAccountToken: false
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 10001
-        runAsGroup: 10001
-        seccompProfile:
-          type: RuntimeDefault
-      containers:
-        - name: api
-          image: ${name}-api:0.1.0
-          imagePullPolicy: IfNotPresent
-          env:
-            - name: PORT
-              value: "3001"
-          ports:
-            - name: http
-              containerPort: 3001
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: http
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: http
-          startupProbe:
-            httpGet:
-              path: /health
-              port: http
-            failureThreshold: 30
-            periodSeconds: 5
-          securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            capabilities:
-              drop: [ALL]
-          resources:
-            requests:
-              cpu: 100m
-              memory: 128Mi
-            limits:
-              cpu: 500m
-              memory: 512Mi
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: ${name}-api
-spec:
-  selector:
-    app.kubernetes.io/name: ${name}
-    app.kubernetes.io/component: api
-  ports:
-    - name: http
-      port: 80
-      targetPort: http
----
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: ${name}-api
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: ${name}-api
-  minReplicas: 2
-  maxReplicas: 20
-  metrics:
-    - type: Resource
-      resource:
-        name: cpu
-        target:
-          type: Utilization
-          averageUtilization: 70
----
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  name: ${name}-api
-spec:
-  minAvailable: 1
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: ${name}
-      app.kubernetes.io/component: api
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: ${name}-web
-spec:
-  replicas: 2
-  revisionHistoryLimit: 3
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: ${name}
-      app.kubernetes.io/component: web
-  template:
-    metadata:
-      labels:
-        app.kubernetes.io/name: ${name}
-        app.kubernetes.io/component: web
-    spec:
-      automountServiceAccountToken: false
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 10001
-        runAsGroup: 10001
-        seccompProfile:
-          type: RuntimeDefault
-      containers:
-        - name: web
-          image: ${name}-web:0.1.0
-          imagePullPolicy: IfNotPresent
-          env:
-            - name: PORT
-              value: "3000"
-          ports:
-            - name: http
-              containerPort: 3000
-          readinessProbe:
-            httpGet:
-              path: /
-              port: http
-          livenessProbe:
-            httpGet:
-              path: /
-              port: http
-          startupProbe:
-            httpGet:
-              path: /
-              port: http
-            failureThreshold: 30
-            periodSeconds: 5
-          securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            capabilities:
-              drop: [ALL]
-          resources:
-            requests:
-              cpu: 50m
-              memory: 64Mi
-            limits:
-              cpu: 250m
-              memory: 256Mi
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: ${name}-web
-spec:
-  selector:
-    app.kubernetes.io/name: ${name}
-    app.kubernetes.io/component: web
-  ports:
-    - name: http
-      port: 80
-      targetPort: http
----
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: ${name}-web
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: ${name}-web
-  minReplicas: 2
-  maxReplicas: 20
-  metrics:
-    - type: Resource
-      resource:
-        name: cpu
-        target:
-          type: Utilization
-          averageUtilization: 70
----
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  name: ${name}-web
-spec:
-  minAvailable: 1
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: ${name}
-      app.kubernetes.io/component: web
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: ${name}-default
-spec:
-  podSelector:
-    matchLabels:
-      app.kubernetes.io/name: ${name}
-  policyTypes: [Ingress, Egress]
-  ingress:
-    - from:
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/name: ${name}
-  egress:
-    - to:
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/name: ${name}
-    - to:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: kube-system
-      ports:
-        - protocol: UDP
-          port: 53
-        - protocol: TCP
-          port: 53
-`;
+function dockerfileFor(options, workspace) {
+  const definition = WORKSPACE_RECIPES[workspace.template];
+  const directory = workspaceDirectory(workspace);
+  const command = deploymentCommand(workspace, definition);
+  if (definition.family === 'python') {
+    return `FROM python:3.13.9-slim-bookworm@sha256:b685a4fa58bb19d1814d78a1ec0f0208f351452724f78b20212c984d6e124a34\nWORKDIR /workspace\nRUN pip install --no-cache-dir uv==0.9.7\nCOPY ${directory} .\nRUN uv sync\nUSER 10001:10001\nCMD ${JSON.stringify(command)}\n`;
+  }
+  if (definition.family === 'php') {
+    return `FROM composer:2.8.12@sha256:5248900ab8b5f7f880c2d62180e40960cd87f60149ec9a1abfd62ac72a02577c AS dependencies\nWORKDIR /workspace\nCOPY ${directory} .\nRUN test -f composer.lock\nRUN composer install --no-dev --no-interaction --classmap-authoritative --no-scripts\nFROM php:8.4.13-cli-bookworm@sha256:e61b50da049acc7b991e3dedac62523924a363c4d7ffae508b8a2d082686861c\nWORKDIR /workspace\nCOPY --from=dependencies /workspace .\nUSER 10001:10001\nCMD ${JSON.stringify(command)}\n`;
+  }
+  if (definition.family === 'go') {
+    const checksumGate = workspace.template === 'go-chi-api' ? 'RUN test -f go.sum\n' : '';
+    return `FROM golang:1.25.3-bookworm@sha256:4f43b271f9673eb7bd0cb3a49cc17b08d8d6ee110277e26dbacc93c43a5a7793 AS build\nWORKDIR /src\nCOPY ${directory} .\n${checksumGate}RUN GOFLAGS=-mod=readonly go mod download\nRUN CGO_ENABLED=0 go build -mod=readonly -o /out/app ./cmd/app\nFROM gcr.io/distroless/static-debian12:nonroot@sha256:f5b485ea962d9bd1186b2f6b3a061191539b905b82ec395de78cbfae51f20e35\nCOPY --from=build /out/app /app\nENTRYPOINT ["/app"]\n`;
+  }
+  const lockfile = LOCKFILE_NAMES[options.packageManager];
+  const install =
+    options.packageManager === 'npm'
+      ? packageManagerShellCommand('npm', ['ci'])
+      : packageManagerShellCommand(options.packageManager, [
+          'install',
+          options.packageManager === 'yarn' ? '--immutable' : '--frozen-lockfile',
+        ]);
+  const build = packageManagerShellCommand(options.packageManager, ['run', `build:${workspace.name}`]);
+  return `FROM node:22.23.1-bookworm-slim@sha256:6c74791e557ce11fc957704f6d4fe134a7bc8d6f5ca4403205b2966bd488f6b3\nWORKDIR /workspace\nCOPY . .\nRUN test -f ${lockfile}\nRUN ${install}\nRUN ${build}\nWORKDIR /workspace/${directory}\nENV NODE_ENV=production\nUSER 10001:10001\nCMD ${JSON.stringify(command)}\n`;
+}
 
+function deploymentCommand(workspace, definition) {
+  const moduleName = pythonModuleName(workspace.name);
+  if (definition.language === 'python') {
+    if (workspace.template === 'python-django-api')
+      return ['uv', 'run', 'python', 'manage.py', 'runserver', '0.0.0.0:8000'];
+    if (workspace.template === 'python-fastapi-api' || workspace.template === 'python-model')
+      return ['uv', 'run', 'uvicorn', `${moduleName}.main:app`, '--host', '0.0.0.0', '--port', '8000'];
+    return ['uv', 'run', 'python', '-m', `${moduleName}.worker`];
+  }
+  if (definition.language === 'php') return ['php', '-S', '0.0.0.0:8080', '-t', 'public'];
+  if (definition.language === 'go') return ['/app'];
+  if (workspace.template === 'node-nest-api') return ['node', 'dist/main.js'];
+  if (workspace.template === 'next-web') return ['npx', '--no-install', 'next', 'start'];
+  if (workspace.template === 'nuxt-web') return ['node', '.output/server/index.mjs'];
+  if (workspace.template === 'sveltekit-web') return ['node', 'build'];
+  if (['react-vite-web', 'vue-vite-web'].includes(workspace.template))
+    return ['npx', '--no-install', 'vite', 'preview', '--host', '0.0.0.0'];
+  if (workspace.template === 'angular-web')
+    return ['npx', '--no-install', 'ng', 'serve', '--host', '0.0.0.0'];
+  const file =
+    workspace.template === 'node-worker'
+      ? 'worker.mjs'
+      : workspace.template === 'node-cron'
+        ? 'job.mjs'
+        : 'server.mjs';
+  return ['node', `src/${file}`];
+}
+
+function kubernetesFiles(options) {
+  const workloadIds = options.workspaces
+    .filter((workspace) => ['service', 'model'].includes(WORKSPACE_RECIPES[workspace.template].kind))
+    .map((workspace) => `${options.name}-${workspace.name}`);
+  const intent = [
+    '# MonoX Kubernetes render gate',
+    '#',
+    '# This file intentionally contains no runnable Kubernetes resources.',
+    '# A target registry and an immutable image reference from the build receipt must be resolved first.',
+    '# Use `monox plan` and `monox render` after binding the selected environment and target.',
+    ...workloadIds.map((id) => `# pending workload: ${id}`),
+    '',
+  ].join('\n');
   return new Map([
-    ['infra/kubernetes/workloads.yaml', workloads],
+    ['infra/kubernetes/workloads.yaml', intent],
     [
       'infra/kubernetes/README.md',
-      `# Kubernetes
-
-These baseline workloads expose internal ClusterIP services and include CPU-based autoscaling. Build and publish the ${name} images, then update the image references before applying the manifests.
-
-Review namespaces, policies, limits, observability, and external routing for each environment. No credentials or deployment domains are included.
-`,
+      '# Kubernetes\n\n`workloads.yaml` is a fail-closed render gate, not a manifest to apply. Bind an environment target and an immutable image reference from the build receipt, then use `monox plan` and `monox render` to produce deployable resources. The generator never emits a guessed or mutable workload image.\n',
     ],
   ]);
 }
@@ -860,26 +660,9 @@ function json(value) {
 }
 
 function gitignore() {
-  return `node_modules/
-.env
-.env.*
-!.env.example
-coverage/
-dist/
-*.log
-.DS_Store
-`;
+  return 'node_modules/\n.env\n.env.*\n!.env.example\ncoverage/\ndist/\n.venv/\nvendor/\n*.log\n.DS_Store\n.monox/\n';
 }
 
 function editorConfig() {
-  return `root = true
-
-[*]
-charset = utf-8
-end_of_line = lf
-insert_final_newline = true
-indent_style = space
-indent_size = 2
-trim_trailing_whitespace = true
-`;
+  return 'root = true\n\n[*]\ncharset = utf-8\nend_of_line = lf\ninsert_final_newline = true\nindent_style = space\nindent_size = 2\ntrim_trailing_whitespace = true\n';
 }

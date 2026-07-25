@@ -5,7 +5,7 @@ __metadata:
   version: 8
   cacheKey: 10
 
-"@monox/affected@workspace:packages/affected":
+"@monox/affected@workspace:^, @monox/affected@workspace:packages/affected":
   version: 0.0.0-use.local
   resolution: "@monox/affected@workspace:packages/affected"
   dependencies:
@@ -15,11 +15,118 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@monox/agent-kit@workspace:packages/agent-kit":
+  version: 0.0.0-use.local
+  resolution: "@monox/agent-kit@workspace:packages/agent-kit"
+  dependencies:
+    "@monox/test-utils": "workspace:^"
+  languageName: unknown
+  linkType: soft
+
 "@monox/api@workspace:apps/api":
   version: 0.0.0-use.local
   resolution: "@monox/api@workspace:apps/api"
   dependencies:
+    "@monox/app-runtime": "workspace:^"
     "@monox/shared": "workspace:^"
+  languageName: unknown
+  linkType: soft
+
+"@monox/app-runtime@workspace:^, @monox/app-runtime@workspace:packages/app-runtime":
+  version: 0.0.0-use.local
+  resolution: "@monox/app-runtime@workspace:packages/app-runtime"
+  dependencies:
+    "@monox/lifecycle": "workspace:^"
+    "@monox/logger": "workspace:^"
+    "@monox/telemetry": "workspace:^"
+  languageName: unknown
+  linkType: soft
+
+"@monox/cli@workspace:packages/cli":
+  version: 0.0.0-use.local
+  resolution: "@monox/cli@workspace:packages/cli"
+  dependencies:
+    "@monox/affected": "workspace:^"
+    "@monox/cloudapter-coolify": "workspace:^"
+    "@monox/cloudapter-core": "workspace:^"
+    "@monox/cloudapter-kubernetes": "workspace:^"
+    "@monox/cloudapter-local": "workspace:^"
+    "@monox/cloudapter-pm2": "workspace:^"
+    "@monox/cloudapter-static": "workspace:^"
+    "@monox/config": "workspace:^"
+    "@monox/deploy-schema": "workspace:^"
+    "@monox/provider-aws": "workspace:^"
+    "@monox/provider-gcp": "workspace:^"
+  bin:
+    monox: ./src/cli.mjs
+  languageName: unknown
+  linkType: soft
+
+"@monox/cloudapter-coolify@workspace:^, @monox/cloudapter-coolify@workspace:packages/cloudapter-coolify":
+  version: 0.0.0-use.local
+  resolution: "@monox/cloudapter-coolify@workspace:packages/cloudapter-coolify"
+  dependencies:
+    "@monox/cloudapter-core": "workspace:^"
+    "@monox/deploy-schema": "workspace:^"
+  languageName: unknown
+  linkType: soft
+
+"@monox/cloudapter-core@workspace:^, @monox/cloudapter-core@workspace:packages/cloudapter-core":
+  version: 0.0.0-use.local
+  resolution: "@monox/cloudapter-core@workspace:packages/cloudapter-core"
+  languageName: unknown
+  linkType: soft
+
+"@monox/cloudapter-kubernetes@workspace:^, @monox/cloudapter-kubernetes@workspace:packages/cloudapter-kubernetes":
+  version: 0.0.0-use.local
+  resolution: "@monox/cloudapter-kubernetes@workspace:packages/cloudapter-kubernetes"
+  dependencies:
+    "@monox/cloudapter-core": "workspace:^"
+    "@monox/kube-renderer": "workspace:^"
+  languageName: unknown
+  linkType: soft
+
+"@monox/cloudapter-local@workspace:^, @monox/cloudapter-local@workspace:packages/cloudapter-local":
+  version: 0.0.0-use.local
+  resolution: "@monox/cloudapter-local@workspace:packages/cloudapter-local"
+  dependencies:
+    "@monox/cloudapter-core": "workspace:^"
+    "@monox/deploy-schema": "workspace:^"
+  languageName: unknown
+  linkType: soft
+
+"@monox/cloudapter-pm2@workspace:^, @monox/cloudapter-pm2@workspace:packages/cloudapter-pm2":
+  version: 0.0.0-use.local
+  resolution: "@monox/cloudapter-pm2@workspace:packages/cloudapter-pm2"
+  dependencies:
+    "@monox/cloudapter-core": "workspace:^"
+    "@monox/deploy-schema": "workspace:^"
+  languageName: unknown
+  linkType: soft
+
+"@monox/cloudapter-ssh@workspace:packages/cloudapter-ssh":
+  version: 0.0.0-use.local
+  resolution: "@monox/cloudapter-ssh@workspace:packages/cloudapter-ssh"
+  dependencies:
+    "@monox/cloudapter-core": "workspace:^"
+  languageName: unknown
+  linkType: soft
+
+"@monox/cloudapter-static@workspace:^, @monox/cloudapter-static@workspace:packages/cloudapter-static":
+  version: 0.0.0-use.local
+  resolution: "@monox/cloudapter-static@workspace:packages/cloudapter-static"
+  dependencies:
+    "@monox/cloudapter-core": "workspace:^"
+    "@monox/deploy-schema": "workspace:^"
+  languageName: unknown
+  linkType: soft
+
+"@monox/config@workspace:^, @monox/config@workspace:packages/config":
+  version: 0.0.0-use.local
+  resolution: "@monox/config@workspace:packages/config"
+  dependencies:
+    "@monox/deploy-schema": "workspace:^"
+    "@monox/workspaces": "workspace:^"
   languageName: unknown
   linkType: soft
 
@@ -29,7 +136,15 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@monox/kube-renderer@workspace:packages/kube-renderer":
+"@monox/fastify@workspace:packages/fastify":
+  version: 0.0.0-use.local
+  resolution: "@monox/fastify@workspace:packages/fastify"
+  dependencies:
+    "@monox/app-runtime": "workspace:^"
+  languageName: unknown
+  linkType: soft
+
+"@monox/kube-renderer@workspace:^, @monox/kube-renderer@workspace:packages/kube-renderer":
   version: 0.0.0-use.local
   resolution: "@monox/kube-renderer@workspace:packages/kube-renderer"
   dependencies:
@@ -39,7 +154,19 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@monox/mono-runner@workspace:packages/mono-runner":
+"@monox/lifecycle@workspace:^, @monox/lifecycle@workspace:packages/lifecycle":
+  version: 0.0.0-use.local
+  resolution: "@monox/lifecycle@workspace:packages/lifecycle"
+  languageName: unknown
+  linkType: soft
+
+"@monox/logger@workspace:^, @monox/logger@workspace:packages/logger":
+  version: 0.0.0-use.local
+  resolution: "@monox/logger@workspace:packages/logger"
+  languageName: unknown
+  linkType: soft
+
+"@monox/mono-runner@workspace:^, @monox/mono-runner@workspace:packages/mono-runner":
   version: 0.0.0-use.local
   resolution: "@monox/mono-runner@workspace:packages/mono-runner"
   dependencies:
@@ -49,15 +176,61 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@monox/provider-aws@workspace:^, @monox/provider-aws@workspace:packages/provider-aws":
+  version: 0.0.0-use.local
+  resolution: "@monox/provider-aws@workspace:packages/provider-aws"
+  dependencies:
+    "@monox/cloudapter-core": "workspace:^"
+  languageName: unknown
+  linkType: soft
+
+"@monox/provider-gcp@workspace:^, @monox/provider-gcp@workspace:packages/provider-gcp":
+  version: 0.0.0-use.local
+  resolution: "@monox/provider-gcp@workspace:packages/provider-gcp"
+  dependencies:
+    "@monox/cloudapter-core": "workspace:^"
+  languageName: unknown
+  linkType: soft
+
+"@monox/runner@workspace:packages/runner":
+  version: 0.0.0-use.local
+  resolution: "@monox/runner@workspace:packages/runner"
+  dependencies:
+    "@monox/mono-runner": "workspace:^"
+  bin:
+    monox-dev: ./src/cli.mjs
+  languageName: unknown
+  linkType: soft
+
+"@monox/service-discovery@workspace:packages/service-discovery":
+  version: 0.0.0-use.local
+  resolution: "@monox/service-discovery@workspace:packages/service-discovery"
+  languageName: unknown
+  linkType: soft
+
 "@monox/shared@workspace:^, @monox/shared@workspace:packages/shared":
   version: 0.0.0-use.local
   resolution: "@monox/shared@workspace:packages/shared"
   languageName: unknown
   linkType: soft
 
+"@monox/telemetry@workspace:^, @monox/telemetry@workspace:packages/telemetry":
+  version: 0.0.0-use.local
+  resolution: "@monox/telemetry@workspace:packages/telemetry"
+  languageName: unknown
+  linkType: soft
+
+"@monox/test-utils@workspace:^, @monox/test-utils@workspace:packages/test-utils":
+  version: 0.0.0-use.local
+  resolution: "@monox/test-utils@workspace:packages/test-utils"
+  languageName: unknown
+  linkType: soft
+
 "@monox/web@workspace:apps/web":
   version: 0.0.0-use.local
   resolution: "@monox/web@workspace:apps/web"
+  dependencies:
+    "@monox/app-runtime": "workspace:^"
   languageName: unknown
   linkType: soft
 
@@ -72,6 +245,8 @@ __metadata:
 "create-monox@workspace:packages/create-monox":
   version: 0.0.0-use.local
   resolution: "create-monox@workspace:packages/create-monox"
+  dependencies:
+    typescript: "npm:6.0.3"
   bin:
     create-monox: src/cli.mjs
   languageName: unknown
@@ -91,5 +266,25 @@ __metadata:
   bin:
     prettier: bin/prettier.cjs
   checksum: 10/1dd1a1e0e40ec3b91cda9d294c4a95022aef61880ca3f441aad99b1252279f58a766c4cece81132c01550dcff1fd445efbd8812ea4a2374313e7fc6c8136f11f
+  languageName: node
+  linkType: hard
+
+"typescript@npm:6.0.3":
+  version: 6.0.3
+  resolution: "typescript@npm:6.0.3"
+  bin:
+    tsc: bin/tsc
+    tsserver: bin/tsserver
+  checksum: 10/0ef2357a4cffd916b52b683a021cdab0f81eea4e9aa35f2d254581c9a5106da02224e3392e1b0ed42b7a48f80c966e5f52b8e1a27941fa0523c1705a9c2e0330
+  languageName: node
+  linkType: hard
+
+"typescript@patch:typescript@npm%3A6.0.3#optional!builtin<compat/typescript>":
+  version: 6.0.3
+  resolution: "typescript@patch:typescript@npm%3A6.0.3#optional!builtin<compat/typescript>::version=6.0.3&hash=5786d5"
+  bin:
+    tsc: bin/tsc
+    tsserver: bin/tsserver
+  checksum: 10/22b67a18dafedf9b1468b64ca20d9aa02ea61d449b65413d8aa6552aeb63f52ef369e86beb25b6b4c91a803d9726ee5c196f391a9b64201263263410a4223ee6
   languageName: node
   linkType: hard

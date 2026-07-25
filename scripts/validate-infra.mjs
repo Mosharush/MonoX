@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
 import { access, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -35,6 +36,10 @@ const composeText = await readFile(compose, 'utf8');
 if (/\b(?:password|secret|token):\s*(?!\$\{|example|change-me|local-only)/i.test(composeText)) {
   throw new Error('Compose file contains a non-placeholder credential-like value');
 }
+const composeImages = [...composeText.matchAll(/^\s+image:\s+([^\s]+)\s*$/gm)].map((match) => match[1]);
+if (composeImages.length === 0 || composeImages.some((image) => !/@sha256:[a-f0-9]{64}$/.test(image))) {
+  throw new Error('Every Compose image must be pinned to an immutable sha256 manifest digest');
+}
 
 const dockerfileText = await readFile(dockerfile, 'utf8');
 if (!/yarn install --immutable/.test(dockerfileText)) {
@@ -42,6 +47,12 @@ if (!/yarn install --immutable/.test(dockerfileText)) {
 }
 if (!/^USER\s+(?!0\b|root\b)/m.test(dockerfileText)) {
   throw new Error('Docker runtime must declare a non-root user');
+}
+const baseImages = [...dockerfileText.matchAll(/^FROM\s+([^\s]+)(?:\s+AS\s+\S+)?$/gim)].map(
+  (match) => match[1]
+);
+if (baseImages.length === 0 || baseImages.some((image) => !/@sha256:[a-f0-9]{64}$/.test(image))) {
+  throw new Error('Every Dockerfile base image must be pinned to an immutable sha256 manifest digest');
 }
 
 run(process.execPath, [renderer, 'validate', deployment]);
@@ -55,12 +66,20 @@ if (/\b(?:password|private[_-]?key|secret[_-]?key|token):/i.test(rendered)) {
 
 run('shellcheck', [entrypoint], { optional: true, label: 'entrypoint lint' });
 const composePlugin = spawnSync('docker', ['compose', 'version'], { cwd: root, encoding: 'utf8' });
+const composeEnvironment = {
+  ...process.env,
+  POSTGRES_PASSWORD: randomBytes(24).toString('base64url'),
+  REDIS_PASSWORD: randomBytes(24).toString('base64url'),
+};
 if (composePlugin.status === 0) {
-  run('docker', ['compose', '-f', compose, '--profile', 'local', 'config', '--quiet']);
+  run('docker', ['compose', '-f', compose, '--profile', 'local', 'config', '--quiet'], {
+    env: composeEnvironment,
+  });
 } else {
   run('docker-compose', ['-f', compose, '--profile', 'local', 'config', '--quiet'], {
     optional: true,
     label: 'Compose validation',
+    env: composeEnvironment,
   });
 }
 
