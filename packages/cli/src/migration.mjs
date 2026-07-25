@@ -13,14 +13,20 @@ function object(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
+function trimHyphens(value) {
+  let start = 0;
+  let end = value.length;
+  while (start < end && value[start] === '-') start += 1;
+  while (end > start && value[end - 1] === '-') end -= 1;
+  return value.slice(start, end);
+}
+
 function id(value, fallback = 'app') {
-  const normalized = String(value ?? fallback)
+  const slug = String(value ?? fallback)
     .toLowerCase()
     .replace(/^@[^/]+\//, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+/, '')
-    .replace(/-+$/, '')
-    .slice(0, 63);
+    .replace(/[^a-z0-9]+/g, '-');
+  const normalized = trimHyphens(slug).slice(0, 63);
   return /^[a-z]/.test(normalized) ? normalized : `app-${normalized}`.slice(0, 63);
 }
 

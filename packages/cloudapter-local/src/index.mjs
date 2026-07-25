@@ -43,14 +43,20 @@ function ownedComposeServices(context) {
   ].sort();
 }
 
+function trimComposeEdges(value) {
+  let start = 0;
+  let end = value.length;
+  while (start < end && (value[start] === '-' || value[start] === '_')) start += 1;
+  while (end > start && (value[end - 1] === '-' || value[end - 1] === '_')) end -= 1;
+  return value.slice(start, end);
+}
+
 function composeProjectName(context) {
-  const value = `${context.config?.project?.name ?? 'project'}-${context.environment ?? 'local'}`
+  const candidate = `${context.config?.project?.name ?? 'project'}-${context.environment ?? 'local'}`
     .toLowerCase()
     .replaceAll(/[^a-z0-9_-]/g, '-')
-    .replaceAll(/-+/g, '-')
-    .replace(/^[-_]+/, '')
-    .replace(/[-_]+$/, '')
-    .slice(0, 63);
+    .replaceAll(/-+/g, '-');
+  const value = trimComposeEdges(candidate).slice(0, 63);
   return value || 'monox-local';
 }
 

@@ -26,13 +26,19 @@ function confirmation(context) {
   return `${project}/${context.environment}/${context.target.id}`;
 }
 
+function trimHyphens(value) {
+  let start = 0;
+  let end = value.length;
+  while (start < end && value[start] === '-') start += 1;
+  while (end > start && value[end - 1] === '-') end -= 1;
+  return value.slice(start, end);
+}
+
 function logicalReference(value) {
-  return String(value)
+  const candidate = String(value)
     .toLowerCase()
-    .replace(/[^a-z0-9-]+/g, '-')
-    .replace(/^-+/, '')
-    .replace(/-+$/, '')
-    .slice(0, 63);
+    .replace(/[^a-z0-9-]+/g, '-');
+  return trimHyphens(candidate).slice(0, 63);
 }
 
 function actionFor(workload, context) {
