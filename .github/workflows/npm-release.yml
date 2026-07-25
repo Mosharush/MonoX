@@ -20,7 +20,7 @@ jobs:
   publish:
     name: Publish create-monox to npm
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     environment: npm
     permissions:
       contents: read
@@ -40,6 +40,7 @@ jobs:
           package-manager-cache: false
 
       - name: Validate package and release tag
+        id: release
         shell: bash
         run: |
           set -euo pipefail
@@ -92,6 +93,8 @@ jobs:
             exit 1
           fi
 
+          echo "package_version=${package_version}" >> "${GITHUB_OUTPUT}"
+
       - name: Install pinned Corepack
         run: npm install --global corepack@0.35.0
 
@@ -114,3 +117,47 @@ jobs:
       - name: Publish with npm trusted publishing
         working-directory: packages/create-monox
         run: npx --yes "npm@${NPM_CLI_VERSION}" publish --access public --provenance --workspaces=false
+
+      - name: Verify the public registry artifact
+        shell: bash
+        env:
+          PACKAGE_VERSION: ${{ steps.release.outputs.package_version }}
+        run: |
+          set -euo pipefail
+
+          registry_version=""
+          for attempt in {1..12}; do
+            registry_version="$(
+              npx --yes "npm@${NPM_CLI_VERSION}" view \
+                "create-monox@${PACKAGE_VERSION}" version \
+                --workspaces=false 2>/dev/null || true
+            )"
+            if [[ "${registry_version}" == "${PACKAGE_VERSION}" ]]; then
+              break
+            fi
+            if [[ "${attempt}" -eq 12 ]]; then
+              echo "create-monox@${PACKAGE_VERSION} did not become readable from the public registry." >&2
+              exit 1
+            fi
+            sleep 10
+          done
+
+          smoke_root="$(mktemp -d)"
+          cd "${smoke_root}"
+          npx --yes "npm@${NPM_CLI_VERSION}" create "monox@${PACKAGE_VERSION}" -- \
+            registry-smoke \
+            --yes \
+            --package-manager npm \
+            --infra all \
+            --no-git
+
+          cd registry-smoke
+          generated_npm_version="$(
+            node --input-type=module -e "
+              import data from './package.json' with { type: 'json' };
+              const match = /^npm@(.+)$/.exec(data.packageManager ?? '');
+              if (!match) process.exit(1);
+              process.stdout.write(match[1]);
+            "
+          )"
+          npx --yes "npm@${generated_npm_version}" test

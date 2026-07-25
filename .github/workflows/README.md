@@ -33,8 +33,10 @@ publishing packages or containers requires an explicit release trigger and a pro
   images to GHCR, refuses to replace an existing release tag, and attaches BuildKit SBOM and provenance
   attestations. GitHub build provenance is also recorded for supported repositories.
 - `npm-release.yml` publishes only when a tag exactly matches `create-monox-v<package version>`. It uses npm
-  trusted publishing with OIDC and provenance. Package metadata can be release-ready in the tree while the
-  protected environment and matching tag continue to block publication.
+  trusted publishing with OIDC and provenance, waits for the exact version to become readable from the public
+  registry, generates a clean npm-based consumer from that registry artifact, and runs the generated test
+  suite. Package metadata can be release-ready in the tree while the protected environment and matching tag
+  continue to block publication.
 
 `create-monox` exists on npm under the `mosharush` maintainer account. Version 0.1.0 was the first release
 from this public repository and upgraded the historical 0.0.5 package in place. Patch releases keep the
