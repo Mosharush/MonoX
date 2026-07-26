@@ -12,6 +12,7 @@ test('serves the starter page and health endpoint', async () => {
     const page = await fetch(`${baseUrl}/?lang=en`);
     assert.equal(page.status, 200);
     const contentSecurityPolicy = page.headers.get('content-security-policy');
+    assert(contentSecurityPolicy);
     assert.doesNotMatch(contentSecurityPolicy, /script-src 'none'/);
     assert.equal(page.headers.get('content-language'), 'en');
     const html = await page.text();

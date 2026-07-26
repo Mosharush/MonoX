@@ -157,6 +157,12 @@ jobs:
             fi
 
             if ! grep -Eq 'E404|ETARGET|notarget' "${registry_error}"; then
+              if [[ "${attempt}" -lt 3 ]]; then
+                cat "${registry_error}" >&2
+                echo "Registry state could not be determined yet; retrying." >&2
+                sleep 5
+                continue
+              fi
               cat "${registry_error}" >&2
               echo "Registry state could not be determined safely." >&2
               exit 1
