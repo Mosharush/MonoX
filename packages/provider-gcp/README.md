@@ -1,10 +1,10 @@
 # `@monox/provider-gcp`
 
 Produces a deterministic Pulumi Automation API intent for Google Cloud targets. It performs no Google Cloud,
-Pulumi or Kubernetes calls in the 0.2 alpha. Authentication is a single `target.bindings.identityRef`
-representing the Workload Identity Federation deploy principal. Service-account key JSON and other credential
-material are rejected. Secret Manager integration is selected by `target.bindings.secretStoreRef` without
-putting secret values in the plan.
+Pulumi or Kubernetes calls in 0.2.0. Authentication is a single `target.bindings.identityRef` representing the
+Workload Identity Federation deploy principal. Service-account key JSON and other credential material are
+rejected. Secret Manager integration is selected by `target.bindings.secretStoreRef` without putting secret
+values in the plan.
 
 `apply`, `rollback` and `destroy` fail with an explicit plan-only error. They never return a successful
 receipt or imply that infrastructure changed.

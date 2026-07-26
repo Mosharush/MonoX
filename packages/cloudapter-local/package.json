@@ -1,6 +1,6 @@
 {
   "name": "@monox/cloudapter-local",
-  "version": "0.2.0-alpha.1",
+  "version": "0.2.0",
   "description": "Plan local Docker Compose delivery without hidden shell execution.",
   "private": true,
   "type": "module",

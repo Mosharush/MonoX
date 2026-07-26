@@ -21,7 +21,7 @@ function headers(contentType, options = {}) {
   return {
     'cache-control': contentType.startsWith('text/html') ? 'no-cache' : 'public, max-age=3600',
     'content-security-policy':
-      "default-src 'self'; style-src 'self'; script-src 'sha256-yobifisrUX5jmFbF2OJOXGbUsGsYDPdPdkH4ehe2Ll0='; frame-ancestors 'none'",
+      "default-src 'self'; style-src 'self'; script-src 'sha256-j5+huJAo2bEyExTIsvCL8uNR05Fe+DupuuQrek0PIb4='; frame-ancestors 'none'",
     'cross-origin-opener-policy': 'same-origin',
     'content-type': contentType,
     'permissions-policy': 'camera=(), geolocation=(), microphone=()',
@@ -50,7 +50,7 @@ function preferredLanguage(request, url) {
 }
 
 export function createWebServer(options = {}) {
-  const runtime = options.runtime ?? createAppRuntime({ name: '@monox/web', version: '0.2.0-alpha.1' });
+  const runtime = options.runtime ?? createAppRuntime({ name: '@monox/web', version: '0.2.0' });
   const server = createServer(async (request, response) => {
     const requestStartedAt = process.hrtime.bigint();
     const url = new URL(request.url ?? '/', 'http://monox.local');

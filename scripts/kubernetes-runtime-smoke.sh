@@ -166,7 +166,7 @@ const [health, ready, hello] = await Promise.all(
 
 assert.deepEqual(health, {
   name: '@monox/api',
-  version: '0.2.0-alpha.1',
+  version: '0.2.0',
   ready: true,
   live: true,
   state: 'running',

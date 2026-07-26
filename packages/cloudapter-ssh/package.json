@@ -1,6 +1,6 @@
 {
   "name": "@monox/cloudapter-ssh",
-  "version": "0.2.0-alpha.1",
+  "version": "0.2.0",
   "description": "Known-host-pinned SSH transport plans for MonoX delivery.",
   "private": true,
   "type": "module",

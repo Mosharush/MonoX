@@ -1,8 +1,8 @@
 # MonoX 0.2 architecture
 
-MonoX 0.2 is a source prerelease. The `0.2.0-alpha.1` tree implements the package-owned deployment contract,
-deterministic generation, project resolution, offline planning and the first adapter boundaries. It is not a
-claim that every advertised cloud path has completed a live apply.
+MonoX 0.2 is the stable generator and offline-contract release line. The `0.2.0` tree implements the
+package-owned deployment contract, deterministic generation, project resolution, offline planning and guarded
+adapter boundaries. Stable here does not mean every remote or cloud path has completed a live apply.
 
 ## One source of truth per concern
 
@@ -52,7 +52,7 @@ A target uses four independent axes:
 
 Bindings may name a namespace, registry, domain, identity reference or external secret-store reference. They
 must not contain credentials. The current AWS and Google Cloud packages emit deterministic Pulumi intent only.
-They do not run Pulumi or contact a provider in `0.2.0-alpha.1`.
+They do not run Pulumi or contact a provider in `0.2.0`.
 
 ## Package map
 
@@ -80,7 +80,7 @@ The public source tree contains these package groups:
   test utilities.
 - Delivery: deployment schemas, Kubernetes rendering, the Cloudapter contract, delivery adapters and provider
   intent packages.
-- Bootstrap: `create-monox`, the only package approved for public npm publication during the alpha sequence.
+- Bootstrap: `create-monox`, the only package approved for public npm publication in the 0.2 release line.
 
 The remaining packages are public source but stay npm-private until the `@monox` scope ownership and release
 policy are verified.
@@ -92,9 +92,9 @@ generator writes the selected IDs, versions and integrity values to `monox.lock`
 complete resolved selection. It never clones a live repository.
 
 `create-monox` publishes the versioned `WorkspaceRecipe` and `AddonRecipe` TypeScript data contracts for
-catalog inspection and tooling. Loading third-party recipes is not enabled in `0.2.0-alpha.1`; generation is
-still restricted to recipes bundled with the package. A future external reference must use a namespaced ID,
-declare its API and recipe versions, and carry a verified integrity record before MonoX can accept it.
+catalog inspection and tooling. Loading third-party recipes is not enabled in `0.2.0`; generation is still
+restricted to recipes bundled with the package. A future external reference must use a namespaced ID, declare
+its API and recipe versions, and carry a verified integrity record before MonoX can accept it.
 
 ## Cloudapter state boundary
 
@@ -113,7 +113,7 @@ content identity.
 The local Docker adapter uses a built-in executor with fixed argument arrays, `shell: false` and explicit
 service ownership. Remote execution-capable adapters accept injected transports. They do not infer a kube
 context, read an SSH key, or construct a shell string from configuration. AWS and GCP adapters are
-deliberately plan-only in this alpha.
+deliberately plan-only in 0.2.0.
 
 ## Runtime contract
 

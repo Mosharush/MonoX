@@ -28,7 +28,7 @@
   <text x="72" y="402" fill="#9AA9BE" font-family="Inter, system-ui, sans-serif" font-size="24">Apps, services, CI, containers and Kubernetes</text>
   <rect x="68" y="492" width="402" height="64" rx="14" fill="#0B1728" stroke="#2B3E58" />
   <circle cx="102" cy="524" r="7" fill="#FFC83D" />
-  <text x="124" y="532" fill="#F7F9FC" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="21">npm create monox@next</text>
+  <text x="124" y="532" fill="#F7F9FC" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="21">npm create monox@latest</text>
   <text x="72" y="596" fill="#4F7CFF" font-family="Inter, system-ui, sans-serif" font-size="20" font-weight="650">monox.dev</text>
   <g aria-hidden="true">
     <rect x="690" y="138" width="422" height="338" rx="28" fill="#0B1728" stroke="#2B3E58" stroke-width="2" />

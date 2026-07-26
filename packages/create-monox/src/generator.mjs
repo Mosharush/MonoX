@@ -20,7 +20,7 @@ import {
 } from './catalog.mjs';
 import { pythonModuleName, renderWorkspace, workspaceDirectory } from './templates.mjs';
 
-export const GENERATOR_VERSION = '0.2.0-alpha.1';
+export const GENERATOR_VERSION = '0.2.0';
 export const PACKAGE_MANAGERS = Object.freeze(['yarn', 'npm', 'pnpm']);
 export const INFRA_OPTIONS = Object.freeze(['none', 'docker', 'kubernetes', 'all']);
 export const ENVIRONMENTS = Object.freeze(['development', 'preview', 'staging', 'production']);
@@ -255,7 +255,7 @@ function infraForDelivery(delivery) {
 function validateDeliveryCompatibility({ infra, delivery, deliveryDefinition, workspaces, addons }) {
   if (deliveryDefinition.runtime === 'docker' && deliveryDefinition.transport !== 'local') {
     throw new Error(
-      `Delivery ${delivery} is cataloged for 0.2.0-alpha.2 but is not executable in 0.2.0-alpha.1. ` +
+      `Delivery ${delivery} is cataloged but unavailable in create-monox 0.2.0. ` +
         'Use docker:local, or select PM2, Coolify or Kubernetes with an explicitly configured adapter.'
     );
   }
@@ -668,7 +668,8 @@ function kubernetesFiles(options) {
     '#',
     '# This file intentionally contains no runnable Kubernetes resources.',
     '# A target registry and an immutable image reference from the build receipt must be resolved first.',
-    '# Use `monox plan` and `monox render` after binding the selected environment and target.',
+    '# create-monox 0.2.0 does not install a public monox delivery binary.',
+    '# Render only through reviewed MonoX source tooling or an explicit adapter integration.',
     ...workloadIds.map((id) => `# pending workload: ${id}`),
     '',
   ].join('\n');
@@ -676,7 +677,7 @@ function kubernetesFiles(options) {
     ['infra/kubernetes/workloads.yaml', intent],
     [
       'infra/kubernetes/README.md',
-      '# Kubernetes\n\n`workloads.yaml` is a fail-closed render gate, not a manifest to apply. Bind an environment target and an immutable image reference from the build receipt, then use `monox plan` and `monox render` to produce deployable resources. The generator never emits a guessed or mutable workload image.\n',
+      '# Kubernetes\n\n`workloads.yaml` is a fail-closed render gate, not a manifest to apply. Bind an environment target and an immutable image reference from the build receipt before rendering through reviewed MonoX source tooling or an explicit adapter integration. `create-monox@0.2.0` does not install a public `monox` delivery binary, and the generator never emits a guessed or mutable workload image.\n',
     ],
   ]);
 }

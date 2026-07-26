@@ -84,14 +84,14 @@ function confirmation(context) {
 
 function unsupportedMutation(operation) {
   throw new TypeError(
-    `AWS provider is plan-only in MonoX 0.2 alpha; ${operation} is unsupported and no infrastructure changes were made`
+    `AWS provider is plan-only in MonoX 0.2.0; ${operation} is unsupported and no infrastructure changes were made`
   );
 }
 
 export class AwsProviderCloudapter {
   constructor() {
     this.id = 'provider-aws';
-    this.version = '0.2.0-alpha.1';
+    this.version = '0.2.0';
     this.apiVersion = '1';
     this.capabilities = [
       'ec2',
@@ -133,7 +133,7 @@ export class AwsProviderCloudapter {
         status: target.bindings?.secretStoreRef ? 'pass' : 'fail',
         message: 'target.bindings.secretStoreRef is required',
       },
-      { id: 'execution', status: 'warning', message: '0.2 alpha provider is plan-only' },
+      { id: 'execution', status: 'warning', message: '0.2.0 provider is plan-only' },
     ];
     return { ok: checks.every((check) => check.status !== 'fail'), checks };
   }
@@ -156,7 +156,7 @@ export class AwsProviderCloudapter {
     } catch (error) {
       errors.push(error.message);
     }
-    return { valid: errors.length === 0, errors, warnings: ['AWS provider alpha is plan-only'] };
+    return { valid: errors.length === 0, errors, warnings: ['AWS provider 0.2.0 is plan-only'] };
   }
 
   async plan(context) {

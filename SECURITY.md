@@ -2,7 +2,8 @@
 
 ## Supported versions
 
-MonoX is pre-release software. Security fixes target the latest `0.x` release and the default branch.
+Security fixes target the current `0.2.x` release line and the default branch. Earlier `0.x` releases may
+receive fixes when a safe backport is practical.
 
 ## Report a vulnerability
 

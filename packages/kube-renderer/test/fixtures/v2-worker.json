@@ -32,7 +32,7 @@
       "dockerfile": "apps/queue-worker/Dockerfile",
       "image": {
         "repository": "registry.invalid/example/queue-worker",
-        "tag": "0.2.0-alpha.1"
+        "tag": "0.2.0"
       }
     },
     "runtime": {

@@ -1,6 +1,6 @@
 {
   "name": "@monox/cloudapter-static",
-  "version": "0.2.0-alpha.1",
+  "version": "0.2.0",
   "description": "Plan guarded static delivery to AWS S3 and CloudFront or Google Cloud Storage and Cloud CDN.",
   "private": true,
   "type": "module",

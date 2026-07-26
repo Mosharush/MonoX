@@ -18,8 +18,8 @@
       content="מייצרים workspaces, boundaries, local services, CI, containers ו-delivery contracts בפקודה אחת."
     />
     <meta property="og:url" content="https://monox.dev/?lang=he" />
-    <meta property="og:image" content="https://monox.dev/og-image.png" />
-    <meta property="og:image:secure_url" content="https://monox.dev/og-image.png" />
+    <meta property="og:image" content="https://monox.dev/og-image.png?v=0.2.0" />
+    <meta property="og:image:secure_url" content="https://monox.dev/og-image.png?v=0.2.0" />
     <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
@@ -30,7 +30,7 @@
       name="twitter:description"
       content="מייצרים workspaces, boundaries, local services, CI, containers ו-delivery contracts בפקודה אחת."
     />
-    <meta name="twitter:image" content="https://monox.dev/og-image.png" />
+    <meta name="twitter:image" content="https://monox.dev/og-image.png?v=0.2.0" />
     <link rel="canonical" href="https://monox.dev/?lang=he" />
     <link rel="alternate" hreflang="en" href="https://monox.dev/?lang=en" />
     <link rel="alternate" hreflang="he" href="https://monox.dev/?lang=he" />
@@ -49,7 +49,7 @@
         <img src="/brand/monox-lockup-horizontal-reverse.svg" width="125" height="40" alt="MonoX" />
       </a>
       <nav class="header-actions" aria-label="ניווט ראשי">
-        <span class="release-status" dir="ltr">0.2 alpha</span>
+        <span class="release-status" dir="ltr">v0.2.0</span>
         <a href="#proof">הוכחה</a>
         <a href="https://github.com/Mosharush/MonoX">GitHub</a>
         <a href="https://www.npmjs.com/package/create-monox">npm</a>
@@ -68,7 +68,7 @@
             agents עובדים מול אותו contract בכל package.
           </p>
           <div class="actions">
-            <a class="primary-action" href="#command">מציצים ל-0.2 alpha</a>
+            <a class="primary-action" href="#command">מתחילים עם 0.2</a>
             <a class="text-action" href="https://github.com/Mosharush/MonoX">רואים את הקוד</a>
           </div>
         </div>
@@ -78,16 +78,16 @@
             <strong id="command-title">יוצרים מוצר</strong>
             <span>deterministic recipes</span>
           </div>
-          <p>ה-build הנוכחי של 0.2 הוא <code>0.2.0-alpha.1</code>, והוא זמין תחת <code>next</code>.</p>
-          <pre tabindex="0"><code><strong>npm create monox@next -- my-product \</strong>
+          <p>ה-release היציב הנוכחי הוא <code>0.2.0</code>.</p>
+          <pre tabindex="0"><code><strong>npm create monox@latest -- my-product \</strong>
 <span>  --workspace api=node-fastify-api \</span>
 <span>  --workspace web=react-vite-web \</span>
 <span>  --workspace jobs=node-worker \</span>
 <span>  --addon redis --addon rabbitmq \</span>
 <span>  --delivery docker:local --yes</span></code></pre>
           <p>
-            מי שרוצה את ה-stable channel נשאר עם <code>@latest</code>. ל-alpha משתמשים ב-<code>@next</code>.
-            בחירה שלא נתמכת נכשלת לפני ש-MonoX כותב קבצים או משנה infra.
+            ב-flow אינטראקטיבי משתמשים ב-<code>@latest</code>. ב-setup script שחייב להיות reproducible נועלים
+            <code>@0.2.0</code>. בחירה שלא נתמכת נכשלת לפני ש-MonoX כותב קבצים או משנה infra.
           </p>
         </aside>
       </section>
@@ -203,10 +203,16 @@
             ><span>רץ דרך ה-local executor המובנה או transport שמחובר במפורש, ודוחה plan לא עדכני.</span>
           </li>
         </ol>
-        <pre class="flow-command" tabindex="0"><code><span>monox validate</span>
-<span>monox config explain @my-product/jobs --env staging</span>
-<span>monox plan --env staging --all --output .monox/plan.json</span>
-<span>monox apply --plan .monox/plan.json</span></code></pre>
+        <p>
+          <strong>הגבול של 0.2.0:</strong> <code>create-monox</code> כותב את ה-contracts האלה, אבל עדיין לא
+          מתקין <code>monox</code> delivery binary ציבורי. הפקודות למטה הן tooling מתוך ה-source repo, לא
+          פקודות שמגיעות בתוך הפרויקט שנוצר.
+        </p>
+        <pre class="flow-command" tabindex="0"><code><span># MonoX source checkout</span>
+<span>yarn monox validate</span>
+<span>yarn monox config explain @monox/jobs --env staging</span>
+<span>yarn monox plan --env staging --all --output .monox/plan.json</span>
+<span>yarn monox apply --plan .monox/plan.json</span></code></pre>
       </section>
 
       <section class="responsibility" aria-labelledby="responsibility-title">
@@ -225,7 +231,7 @@
 
       <section class="catalog" id="catalog" aria-labelledby="catalog-title">
         <div class="section-intro">
-          <p class="context">הוכחות של 0.2 alpha</p>
+          <p class="context">הוכחות של release 0.2</p>
           <h2 id="catalog-title">מה כבר ממומש, מה guarded ומה עדיין מחכה ל-production proof</h2>
           <p>הסטטוס מחובר לטסטים ב-repo הציבורי. Claims עתידיים נשארים בחוץ עד שיש להם הוכחה.</p>
         </div>
@@ -234,7 +240,7 @@
             <thead>
               <tr>
                 <th scope="col">Surface</th>
-                <th scope="col">סטטוס alpha</th>
+                <th scope="col">סטטוס release</th>
                 <th scope="col">הוכחה</th>
               </tr>
             </thead>
@@ -258,13 +264,13 @@
               </tr>
               <tr>
                 <th scope="row">PM2, SSH, Coolify ו-Kubernetes</th>
-                <td><span class="status guarded">Guarded alpha</span></td>
+                <td><span class="status guarded">Guarded</span></td>
                 <td>Typed plans ו-fail-closed transport injection לפני שינוי חיצוני</td>
               </tr>
               <tr>
                 <th scope="row">AWS ו-GCP provisioning</th>
                 <td><span class="status guarded">Plan only</span></td>
-                <td>Provider plans בגישת OIDC; apply אמיתי ב-sandbox עדיין release gate</td>
+                <td>ב-0.2.0 נוצרים provider plans בלבד; real sandbox apply לא כלול</td>
               </tr>
               <tr>
                 <th scope="row">Production reference</th>

@@ -1,6 +1,6 @@
 {
   "name": "@monox/cloudapter-core",
-  "version": "0.2.0-alpha.1",
+  "version": "0.2.0",
   "description": "Provider-neutral Cloudapter contract and tamper-evident plan helpers.",
   "private": true,
   "type": "module",

@@ -61,7 +61,7 @@ excerpts.
 
 ## 0.2 release boundary
 
-The following evidence is required before a `0.2.0-alpha` prerelease:
+The following evidence is required before a public `0.2.x` package release:
 
 - repository formatting, lint, tests, builds and infrastructure validation pass from an immutable install;
 - schema, generated declaration and runtime validator parity passes;
@@ -71,9 +71,9 @@ The following evidence is required before a `0.2.0-alpha` prerelease:
 - the npm package dry run contains only reviewed public files;
 - the tag points to the protected `main` commit and trusted publishing uses OIDC with provenance.
 
-The alpha tag does not waive the private-reference credential gate. Any production case study, dual-render
-diff or production rollout remains private until the affected credentials are rotated, the reference history
-is handled under the approved process, and a canary plus rollback have been reviewed.
+Publishing the generator does not waive the private-reference credential gate. Any production case study,
+dual-render diff or production rollout remains private until the affected credentials are rotated, the
+reference history is handled under the approved process, and a canary plus rollback have been reviewed.
 
 Kubernetes add-on metadata marked `unverified` is non-executable. Provider packages marked plan-only cannot be
 promoted to apply support through documentation or a CLI flag. Support status changes only after the adapter's

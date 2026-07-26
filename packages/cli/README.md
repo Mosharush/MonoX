@@ -6,6 +6,9 @@ selected adapter has an available executor, but still require an explicit enviro
 Unsupported remote transports and plan-only providers fail closed. Destruction requires an exact
 `project/environment/target` confirmation string.
 
+In 0.2.0 this package is public source but npm-private. Run it from a MonoX source checkout through the root
+`yarn monox` script. `create-monox@0.2.0` does not install this executable in generated projects.
+
 The executable selects the built-in local, PM2, Coolify, Kubernetes, static, AWS or GCP Cloudapter from target
 axes. The SSH package is a transport primitive and is not presented as a complete Docker delivery path. Each
 adapter can plan and render without credentials. Local Docker targets use the built-in safe Compose executor;
@@ -19,12 +22,12 @@ arrays with `shell: false`, a project-specific namespace and explicit owned serv
 are bounded. Rollback and destroy never remove volumes, unmanaged services or the whole Compose project.
 
 ```text
-monox validate
-monox config explain @example/api --env local
-monox plan --env preview --all
-monox render --env preview --target preview-kubernetes --all --output-dir .monox/rendered
-monox deploy --env preview --all
-monox destroy --env preview --target preview-kubernetes --confirm example/preview/preview-kubernetes
+yarn monox validate
+yarn monox config explain @example/api --env local
+yarn monox plan --env preview --all
+yarn monox render --env preview --target preview-kubernetes --all --output-dir .monox/rendered
+yarn monox deploy --env preview --all
+yarn monox destroy --env preview --target preview-kubernetes --confirm example/preview/preview-kubernetes
 ```
 
 A state-changing deploy is limited to one target per invocation and holds a local target lock. Successful

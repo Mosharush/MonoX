@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 320" role="img" aria-labelledby="title desc">
   <title id="title">MonoX README and npm header</title>
-  <desc id="desc">MonoX monorepo starter and delivery contracts with the alpha create command.</desc>
+  <desc id="desc">MonoX monorepo starter and delivery contracts with the public create command.</desc>
   <rect width="1280" height="320" fill="#07111F" />
   <rect x="24" y="24" width="1232" height="272" rx="24" fill="#0B1728" stroke="#2B3E58" />
   <g transform="translate(54 54) scale(.62)">
@@ -22,7 +22,7 @@
   <text x="226" y="198" fill="#9AA9BE" font-family="Inter, system-ui, sans-serif" font-size="20">for people, CI and coding agents</text>
   <rect x="732" y="92" width="464" height="72" rx="14" fill="#07111F" stroke="#2B3E58" />
   <circle cx="764" cy="128" r="7" fill="#FFC83D" />
-  <text x="786" y="136" fill="#F7F9FC" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="22">npm create monox@next</text>
+  <text x="786" y="136" fill="#F7F9FC" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="22">npm create monox@latest</text>
   <path d="M762 214h346" stroke="#4F7CFF" stroke-width="6" stroke-linecap="round" />
   <path d="m1134 214-30-22v44Z" fill="#4F7CFF" />
   <rect x="802" y="196" width="34" height="34" rx="8" fill="#0B1728" stroke="#9AA9BE" />

@@ -1,6 +1,6 @@
 {
   "name": "@monox/config",
-  "version": "0.2.0-alpha.1",
+  "version": "0.2.0",
   "description": "MonoX v2 project configuration discovery and resolution.",
   "private": true,
   "type": "module",

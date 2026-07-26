@@ -1,6 +1,6 @@
 {
   "name": "create-monox",
-  "version": "0.2.0-alpha.1",
+  "version": "0.2.0",
   "description": "Create a deterministic, polyglot, agent-ready monorepo with explicit delivery contracts.",
   "license": "MIT",
   "author": "Moshe Harush <moshe@haru.sh>",

@@ -58,7 +58,7 @@ function confirmation(context) {
 export class Pm2Cloudapter {
   constructor() {
     this.id = 'pm2';
-    this.version = '0.2.0-alpha.1';
+    this.version = '0.2.0';
     this.apiVersion = '1';
     this.capabilities = ['apply', 'health-gate', 'pm2', 'render', 'rollback', 'status'];
   }

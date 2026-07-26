@@ -1,6 +1,6 @@
 {
   "name": "@monox/provider-aws",
-  "version": "0.2.0-alpha.1",
+  "version": "0.2.0",
   "description": "Plan-only AWS infrastructure intents with OIDC identity references.",
   "private": true,
   "type": "module",

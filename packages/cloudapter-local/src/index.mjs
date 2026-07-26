@@ -73,7 +73,7 @@ function expectedConfirmation(context) {
 export class LocalCloudapter {
   constructor() {
     this.id = 'local';
-    this.version = '0.2.0-alpha.1';
+    this.version = '0.2.0';
     this.apiVersion = '1';
     this.capabilities = ['apply', 'destroy', 'docker-compose', 'health-gate', 'render', 'rollback', 'status'];
   }
