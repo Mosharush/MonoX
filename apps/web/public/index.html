@@ -100,9 +100,7 @@
             <strong id="command-title">Create a product</strong>
             <span>deterministic recipes</span>
           </div>
-          <p>
-            The command becomes available after the protected prerelease is published under <code>next</code>.
-          </p>
+          <p>The current 0.2 build is <code>0.2.0-alpha.1</code>, available under <code>next</code>.</p>
           <pre tabindex="0"><code><strong>npm create monox@next -- my-product \</strong>
 <span>  --workspace api=node-fastify-api \</span>
 <span>  --workspace web=react-vite-web \</span>
@@ -110,8 +108,8 @@
 <span>  --addon redis --addon rabbitmq \</span>
 <span>  --delivery docker:local --yes</span></code></pre>
           <p>
-            Until then, <code>@latest</code> remains the stable release. Unsupported selections fail before
-            MonoX writes a project or changes infrastructure.
+            <code>@latest</code> remains the stable channel. Use <code>@next</code> for the alpha. Unsupported
+            selections fail before MonoX writes a project or changes infrastructure.
           </p>
         </aside>
       </section>

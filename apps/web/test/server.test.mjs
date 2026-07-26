@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import test from 'node:test';
 
 import { startWebServer } from '../src/server.mjs';
@@ -10,14 +11,22 @@ test('serves the starter page and health endpoint', async () => {
   try {
     const page = await fetch(`${baseUrl}/?lang=en`);
     assert.equal(page.status, 200);
-    assert.match(page.headers.get('content-security-policy'), /script-src 'none'/);
+    const contentSecurityPolicy = page.headers.get('content-security-policy');
+    assert(contentSecurityPolicy);
+    assert.doesNotMatch(contentSecurityPolicy, /script-src 'none'/);
     assert.equal(page.headers.get('content-language'), 'en');
     const html = await page.text();
+    const structuredData = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/.exec(html)?.[1];
+    assert(structuredData);
+    const structuredDataHash = `sha256-${createHash('sha256').update(structuredData).digest('base64')}`;
+    assert(contentSecurityPolicy.includes(`'${structuredDataHash}'`));
     assert.match(html, /Generate the product and its delivery path together/);
     assert.match(html, /What the command writes/);
     assert.match(html, /What you do not need to wire by hand/);
     assert.match(html, /npmjs\.com\/package\/create-monox/);
     assert.match(html, /npm create monox@next -- my-product/);
+    assert.match(html, /current 0\.2 build is <code>0\.2\.0-alpha\.1<\/code>/);
+    assert.doesNotMatch(html, /becomes available after|Until then/);
     assert.match(html, /monox\.lock/);
     assert.match(html, /MonoX draws the boundary/);
     assert.match(html, /SoftwareSourceCode/);
@@ -37,6 +46,8 @@ test('serves the starter page and health endpoint', async () => {
     assert.match(hebrewHtml, /<html lang="he" dir="rtl">/);
     assert.match(hebrewHtml, /מה כבר לא צריך לחבר ידנית/);
     assert.match(hebrewHtml, /delivery path/);
+    assert.match(hebrewHtml, /ה-build הנוכחי של 0\.2 הוא <code>0\.2\.0-alpha\.1<\/code>/);
+    assert.doesNotMatch(hebrewHtml, /תהיה זמינה אחרי|עד אז/);
     assert.match(hebrewHtml, /property="og:locale" content="he_IL"/);
     assert.match(hebrewHtml, /property="og:locale:alternate" content="en_US"/);
     assert.match(hebrewHtml, /name="twitter:image" content="https:\/\/monox\.dev\/og-image\.png"/);

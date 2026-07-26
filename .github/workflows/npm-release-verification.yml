@@ -1,0 +1,268 @@
+name: Verify create-monox release
+
+on:
+  workflow_call:
+    inputs:
+      package_version:
+        required: true
+        type: string
+      release_tag:
+        required: true
+        type: string
+      source_sha:
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing create-monox release tag to verify
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-create-monox-${{ inputs.release_tag }}
+  cancel-in-progress: false
+
+env:
+  NPM_CLI_VERSION: 12.0.1
+
+jobs:
+  verify:
+    name: Verify registry metadata, provenance and consumer
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the exact release tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/tags/${{ inputs.release_tag }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+
+      - name: Validate the release identity
+        id: release
+        shell: bash
+        env:
+          EXPECTED_PACKAGE_VERSION: ${{ inputs.package_version }}
+          EXPECTED_SOURCE_SHA: ${{ inputs.source_sha }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          set -euo pipefail
+
+          package_name="$(node --input-type=module -e "import data from './packages/create-monox/package.json' with { type: 'json' }; process.stdout.write(data.name)")"
+          package_version="$(node --input-type=module -e "import data from './packages/create-monox/package.json' with { type: 'json' }; process.stdout.write(data.version)")"
+          expected_tag="create-monox-v${package_version}"
+          source_sha="$(git rev-parse HEAD)"
+          tag_sha="$(git rev-parse "refs/tags/${RELEASE_TAG}^{commit}" 2>/dev/null || true)"
+
+          if [[ "${package_name}" != "create-monox" || "${RELEASE_TAG}" != "${expected_tag}" ]]; then
+            echo "Verification tag does not match the create-monox package version." >&2
+            exit 1
+          fi
+          if [[ -z "${tag_sha}" || "${source_sha}" != "${tag_sha}" ]]; then
+            echo "Checked-out source does not match ${RELEASE_TAG}." >&2
+            exit 1
+          fi
+          if [[ -n "${EXPECTED_PACKAGE_VERSION}" && "${package_version}" != "${EXPECTED_PACKAGE_VERSION}" ]]; then
+            echo "Called package version does not match the tagged package." >&2
+            exit 1
+          fi
+          if [[ -n "${EXPECTED_SOURCE_SHA}" && "${source_sha}" != "${EXPECTED_SOURCE_SHA}" ]]; then
+            echo "Called source SHA does not match the release tag." >&2
+            exit 1
+          fi
+
+          echo "package_version=${package_version}" >> "${GITHUB_OUTPUT}"
+          echo "source_sha=${source_sha}" >> "${GITHUB_OUTPUT}"
+
+      - name: Verify registry metadata and signed provenance
+        shell: bash
+        env:
+          PACKAGE_VERSION: ${{ steps.release.outputs.package_version }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          SOURCE_SHA: ${{ steps.release.outputs.source_sha }}
+        run: |
+          set -euo pipefail
+
+          expected_attestation_url="https://registry.npmjs.org/-/npm/v1/attestations/create-monox@${PACKAGE_VERSION}"
+          registry_record=""
+          for attempt in {1..18}; do
+            registry_cache="$(mktemp -d)"
+            registry_record="$(
+              NPM_CONFIG_CACHE="${registry_cache}" \
+                npx --yes "npm@${NPM_CLI_VERSION}" view \
+                  "create-monox@${PACKAGE_VERSION}" \
+                  version \
+                  gitHead \
+                  dist.integrity \
+                  dist.attestations \
+                  dist.signatures \
+                  --json \
+                  --workspaces=false 2>/dev/null || true
+            )"
+            if REGISTRY_RECORD="${registry_record}" \
+              PACKAGE_VERSION="${PACKAGE_VERSION}" \
+              SOURCE_SHA="${SOURCE_SHA}" \
+              EXPECTED_ATTESTATION_URL="${expected_attestation_url}" \
+              node --input-type=module -e "
+                try {
+                  const raw = JSON.parse(process.env.REGISTRY_RECORD);
+                  const data = Array.isArray(raw) ? raw[0] : raw;
+                  const integrity = data?.['dist.integrity'] ?? data?.dist?.integrity;
+                  const attestations = data?.['dist.attestations'] ?? data?.dist?.attestations;
+                  const signatures = data?.['dist.signatures'] ?? data?.dist?.signatures;
+                  const valid =
+                    data.version === process.env.PACKAGE_VERSION &&
+                    data.gitHead === process.env.SOURCE_SHA &&
+                    integrity?.startsWith('sha512-') &&
+                    attestations?.url === process.env.EXPECTED_ATTESTATION_URL &&
+                    attestations?.provenance?.predicateType === 'https://slsa.dev/provenance/v1' &&
+                    typeof signatures?.[0]?.keyid === 'string' &&
+                    typeof signatures?.[0]?.sig === 'string';
+                  process.exit(valid ? 0 : 1);
+                } catch {
+                  process.exit(1);
+                }
+              "; then
+              break
+            fi
+            if [[ "${attempt}" -eq 18 ]]; then
+              echo "Exact release metadata did not become readable from npm." >&2
+              exit 1
+            fi
+            sleep 10
+          done
+
+          package_integrity="$(
+            REGISTRY_RECORD="${registry_record}" node --input-type=module -e \
+              "const raw = JSON.parse(process.env.REGISTRY_RECORD); const data = Array.isArray(raw) ? raw[0] : raw; process.stdout.write(data?.['dist.integrity'] ?? data?.dist?.integrity ?? '')"
+          )"
+          attestation_file="$(mktemp)"
+          curl --fail --silent --show-error "${expected_attestation_url}" --output "${attestation_file}"
+          ATTESTATION_FILE="${attestation_file}" \
+            PACKAGE_INTEGRITY="${package_integrity}" \
+            PACKAGE_VERSION="${PACKAGE_VERSION}" \
+            RELEASE_TAG="${RELEASE_TAG}" \
+            REPOSITORY="${GITHUB_REPOSITORY}" \
+            SOURCE_SHA="${SOURCE_SHA}" \
+            node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync } from 'node:fs';
+
+          const document = JSON.parse(readFileSync(process.env.ATTESTATION_FILE, 'utf8'));
+          const attestation = document.attestations?.find(
+            (entry) => entry.predicateType === 'https://slsa.dev/provenance/v1'
+          );
+          assert(attestation);
+          assert.match(attestation.bundle?.mediaType ?? '', /^application\/vnd\.dev\.sigstore\.bundle/);
+          assert(attestation.bundle?.dsseEnvelope?.signatures?.length > 0);
+          assert(attestation.bundle?.verificationMaterial?.tlogEntries?.length > 0);
+
+          const statement = JSON.parse(
+            Buffer.from(attestation.bundle.dsseEnvelope.payload, 'base64').toString('utf8')
+          );
+          const expectedSubject = `pkg:npm/create-monox@${process.env.PACKAGE_VERSION}`;
+          const expectedRepository = `https://github.com/${process.env.REPOSITORY}`;
+          const expectedRef = `refs/tags/${process.env.RELEASE_TAG}`;
+          const expectedDependency = `git+${expectedRepository}@${expectedRef}`;
+          const expectedIntegrity = Buffer.from(
+            process.env.PACKAGE_INTEGRITY.replace(/^sha512-/, ''),
+            'base64'
+          ).toString('hex');
+          const subject = statement.subject?.find((entry) => entry.name === expectedSubject);
+          const build = statement.predicate?.buildDefinition;
+          const dependency = build?.resolvedDependencies?.find(
+            (entry) => entry.uri === expectedDependency
+          );
+
+          assert.equal(statement._type, 'https://in-toto.io/Statement/v1');
+          assert.equal(statement.predicateType, 'https://slsa.dev/provenance/v1');
+          assert.equal(subject?.digest?.sha512, expectedIntegrity);
+          assert.equal(
+            build?.buildType,
+            'https://slsa-framework.github.io/github-actions-buildtypes/workflow/v1'
+          );
+          assert.equal(build?.externalParameters?.workflow?.repository, expectedRepository);
+          assert.equal(build?.externalParameters?.workflow?.ref, expectedRef);
+          assert.equal(build?.externalParameters?.workflow?.path, '.github/workflows/npm-release.yml');
+          assert.equal(build?.internalParameters?.github?.event_name, 'push');
+          assert.equal(dependency?.digest?.gitCommit, process.env.SOURCE_SHA);
+          NODE
+
+          signature_root="$(mktemp -d)"
+          signature_cache="$(mktemp -d)"
+          cd "${signature_root}"
+          NPM_CONFIG_CACHE="${signature_cache}" npx --yes "npm@${NPM_CLI_VERSION}" init --yes >/dev/null
+          NPM_CONFIG_CACHE="${signature_cache}" \
+            npx --yes "npm@${NPM_CLI_VERSION}" install \
+              --ignore-scripts \
+              --save-exact \
+              --no-audit \
+              --no-fund \
+              "create-monox@${PACKAGE_VERSION}" >/dev/null
+          signature_audit="$(
+            NPM_CONFIG_CACHE="${signature_cache}" \
+              npx --yes "npm@${NPM_CLI_VERSION}" audit signatures --json
+          )"
+          SIGNATURE_AUDIT="${signature_audit}" node --input-type=module -e "
+            const result = JSON.parse(process.env.SIGNATURE_AUDIT);
+            if (result.invalid?.length !== 0 || result.missing?.length !== 0) process.exit(1);
+          "
+
+      - name: Run a clean-cache registry consumer smoke
+        shell: bash
+        env:
+          PACKAGE_VERSION: ${{ steps.release.outputs.package_version }}
+        run: |
+          set -euo pipefail
+
+          smoke_project=""
+          smoke_cache=""
+          for attempt in {1..12}; do
+            candidate_root="$(mktemp -d)"
+            candidate_cache="$(mktemp -d)"
+            if (
+              cd "${candidate_root}"
+              NPM_CONFIG_CACHE="${candidate_cache}" \
+                npx --yes "npm@${NPM_CLI_VERSION}" create "monox@${PACKAGE_VERSION}" -- \
+                  registry-smoke \
+                  --yes \
+                  --package-manager npm \
+                  --infra all \
+                  --no-git
+            ); then
+              smoke_project="${candidate_root}/registry-smoke"
+              smoke_cache="${candidate_cache}"
+              break
+            fi
+            if [[ "${attempt}" -eq 12 ]]; then
+              echo "create-monox@${PACKAGE_VERSION} did not become executable from a clean registry cache." >&2
+              exit 1
+            fi
+            echo "Registry consumer attempt ${attempt} was not ready; retrying." >&2
+            sleep 10
+          done
+
+          cd "${smoke_project}"
+          generated_npm_version="$(
+            node --input-type=module -e "
+              import data from './package.json' with { type: 'json' };
+              const match = /^npm@(.+)$/.exec(data.packageManager ?? '');
+              if (!match) process.exit(1);
+              process.stdout.write(match[1]);
+            "
+          )"
+          NPM_CONFIG_CACHE="${smoke_cache}" npx --yes "npm@${generated_npm_version}" test
+          node scripts/verify-monox-lock.mjs
