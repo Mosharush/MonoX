@@ -164,8 +164,14 @@ const [health, ready, hello] = await Promise.all(
   [healthFile, readyFile, helloFile].map(async (file) => JSON.parse(await readFile(file, 'utf8')))
 );
 
-assert.deepEqual(health, { status: 'ok' });
-assert.deepEqual(ready, { status: 'ready', environment: 'preview' });
+assert.deepEqual(health, {
+  name: '@monox/api',
+  version: '0.2.0-alpha.1',
+  ready: true,
+  live: true,
+  state: 'running',
+});
+assert.deepEqual(ready, { ready: true });
 assert.equal(hello.message, 'Hello from MonoX');
 assert.equal(hello.environment, 'preview');
 NODE

@@ -4,6 +4,8 @@ import { createServer } from 'node:http';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+import { createAppRuntime } from '@monox/app-runtime';
+
 const appRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const publicRoot = path.join(appRoot, 'public');
 const contentTypes = new Map([
@@ -15,7 +17,7 @@ const contentTypes = new Map([
   ['.xml', 'application/xml; charset=utf-8'],
 ]);
 
-function headers(contentType) {
+function headers(contentType, options = {}) {
   return {
     'cache-control': contentType.startsWith('text/html') ? 'no-cache' : 'public, max-age=3600',
     'content-security-policy':
@@ -26,22 +28,47 @@ function headers(contentType) {
     'referrer-policy': 'strict-origin-when-cross-origin',
     'x-content-type-options': 'nosniff',
     'x-frame-options': 'DENY',
+    ...(options.language ? { 'content-language': options.language, vary: 'Accept-Language' } : {}),
   };
 }
 
-export function createWebServer() {
-  return createServer(async (request, response) => {
-    const url = new URL(request.url ?? '/', 'http://monox.local');
+function preferredLanguage(request, url) {
+  const explicit = url.searchParams.get('lang');
+  if (explicit === 'en' || explicit === 'he') return explicit;
+  const candidates = String(request.headers['accept-language'] ?? '')
+    .split(',')
+    .map((entry, index) => {
+      const [tag, ...parameters] = entry.trim().split(';');
+      const quality = parameters
+        .map((parameter) => /^q=([0-9.]+)$/i.exec(parameter.trim()))
+        .find(Boolean)?.[1];
+      return { language: tag.toLowerCase().split('-')[0], quality: Number(quality ?? 1), index };
+    })
+    .filter((entry) => ['en', 'he'].includes(entry.language) && Number.isFinite(entry.quality))
+    .sort((left, right) => right.quality - left.quality || left.index - right.index);
+  return candidates[0]?.language ?? 'en';
+}
 
-    if (request.method === 'GET' && url.pathname === '/healthz') {
-      const body = JSON.stringify({ status: 'ok' });
-      response.writeHead(200, {
-        ...headers('application/json; charset=utf-8'),
-        'content-length': body.length,
-      });
-      response.end(body);
-      return;
+export function createWebServer(options = {}) {
+  const runtime = options.runtime ?? createAppRuntime({ name: '@monox/web', version: '0.2.0-alpha.1' });
+  const server = createServer(async (request, response) => {
+    const requestStartedAt = process.hrtime.bigint();
+    const url = new URL(request.url ?? '/', 'http://monox.local');
+    const language = preferredLanguage(request, url);
+
+    for (const [name, value] of Object.entries(headers('text/plain; charset=utf-8'))) {
+      if (name !== 'content-type') response.setHeader(name, value);
     }
+    if (request.method === 'GET' && runtime.handleSystemRequest(request, response)) return;
+
+    response.once('finish', () => {
+      runtime.observeRequest({
+        method: request.method,
+        route: url.pathname === '/' ? '/' : 'static',
+        statusCode: response.statusCode,
+        durationSeconds: Number(process.hrtime.bigint() - requestStartedAt) / 1_000_000_000,
+      });
+    });
 
     if (request.method !== 'GET' && request.method !== 'HEAD') {
       response.writeHead(405, headers('text/plain; charset=utf-8'));
@@ -49,7 +76,12 @@ export function createWebServer() {
       return;
     }
 
-    const relativePath = url.pathname === '/' ? 'index.html' : url.pathname.slice(1);
+    const relativePath =
+      url.pathname === '/' || url.pathname === '/index.html'
+        ? language === 'he'
+          ? 'index.he.html'
+          : 'index.html'
+        : url.pathname.slice(1);
     const filePath = path.resolve(publicRoot, relativePath);
     if (!filePath.startsWith(`${publicRoot}${path.sep}`)) {
       response.writeHead(400, headers('text/plain; charset=utf-8'));
@@ -77,7 +109,10 @@ export function createWebServer() {
 
       const info = await stat(resolvedFilePath);
       if (!info.isFile()) throw new Error('Not a file');
-      response.writeHead(200, { ...headers(contentType), 'content-length': info.size });
+      response.writeHead(200, {
+        ...headers(contentType, { language: contentType.startsWith('text/html') ? language : undefined }),
+        'content-length': info.size,
+      });
       if (request.method === 'HEAD') response.end();
       else createReadStream(resolvedFilePath).pipe(response);
     } catch {
@@ -85,23 +120,29 @@ export function createWebServer() {
       response.end('Not found');
     }
   });
+
+  Object.defineProperty(server, 'monoxRuntime', { value: runtime });
+  runtime.attachServer(server);
+  return server;
 }
 
 export async function startWebServer(options = {}) {
-  const server = createWebServer();
+  const server = createWebServer(options);
   const port = Number(options.port ?? process.env.PORT ?? 3001);
   const host = options.host ?? process.env.HOST ?? '0.0.0.0';
   await new Promise((resolve, reject) => {
     server.once('error', reject);
     server.listen(port, host, resolve);
   });
+  server.monoxRuntime.setReady(true);
   return server;
 }
 
 const isEntryPoint = process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url;
 if (isEntryPoint) {
   const server = await startWebServer();
+  server.monoxRuntime.lifecycle.installSignalHandlers();
   const address = server.address();
   const port = typeof address === 'object' && address ? address.port : process.env.PORT;
-  console.log(`MonoX web listening on http://localhost:${port}`);
+  server.monoxRuntime.logger.info('HTTP server listening', { host: 'localhost', port });
 }

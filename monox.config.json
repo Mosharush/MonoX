@@ -1,38 +1,88 @@
 {
   "$schema": "./schemas/monox.schema.json",
-  "name": "monox",
-  "workspaceGlobs": ["apps/*", "packages/*", "infra/*"],
+  "schemaVersion": "2",
+  "project": {
+    "name": "monox",
+    "workspaceGlobs": ["apps/*", "packages/*", "infra/*"],
+    "defaultEnvironment": "local"
+  },
   "boundaries": {
     "apps": ["packages"],
     "packages": ["packages"],
     "infra": ["packages"]
   },
-  "environments": ["local", "preview", "production"],
-  "deployment": {
-    "namespace": "monox",
-    "registry": "ghcr.io/mosharush",
-    "imagePullPolicy": "IfNotPresent",
-    "autoscaling": {
-      "mode": "hpa",
-      "minReplicas": 1,
-      "maxReplicas": 20,
-      "cpuTarget": 70
+  "workloadProfiles": {},
+  "environments": {
+    "local": {
+      "production": false,
+      "protected": false,
+      "bindings": [{ "target": "local-docker", "selector": { "workloads": ["*"] } }]
+    },
+    "preview": {
+      "production": false,
+      "protected": false,
+      "bindings": [{ "target": "preview-kubernetes", "selector": { "workloads": ["*"] } }]
+    },
+    "staging": {
+      "production": false,
+      "protected": true,
+      "bindings": [{ "target": "staging-kubernetes", "selector": { "workloads": ["*"] } }]
+    },
+    "production": {
+      "production": true,
+      "protected": true,
+      "bindings": [{ "target": "production-kubernetes", "selector": { "workloads": ["*"] } }]
     }
   },
-  "applications": [
-    {
-      "name": "api",
-      "workspace": "@monox/api",
-      "port": 3000,
-      "healthPath": "/healthz",
-      "public": true
+  "targets": {
+    "local-docker": {
+      "provider": "generic",
+      "provisioner": "none",
+      "transport": "local",
+      "runtime": "docker",
+      "bindings": { "namespace": "monox-local" }
     },
-    {
-      "name": "web",
-      "workspace": "@monox/web",
-      "port": 3001,
-      "healthPath": "/healthz",
-      "public": true
+    "preview-kubernetes": {
+      "provider": "generic",
+      "provisioner": "none",
+      "transport": "kubernetes-api",
+      "runtime": "kubernetes",
+      "bindings": {
+        "namespace": "monox-preview",
+        "registry": "ghcr.io/mosharush",
+        "identityRef": "github-oidc",
+        "secretStoreRef": "external-secrets"
+      },
+      "clusterRef": "preview-cluster",
+      "ttlHours": 24
+    },
+    "staging-kubernetes": {
+      "provider": "generic",
+      "provisioner": "none",
+      "transport": "kubernetes-api",
+      "runtime": "kubernetes",
+      "bindings": {
+        "namespace": "monox-staging",
+        "registry": "ghcr.io/mosharush",
+        "identityRef": "github-oidc",
+        "secretStoreRef": "external-secrets"
+      },
+      "clusterRef": "staging-cluster"
+    },
+    "production-kubernetes": {
+      "provider": "generic",
+      "provisioner": "none",
+      "transport": "kubernetes-api",
+      "runtime": "kubernetes",
+      "bindings": {
+        "namespace": "monox",
+        "registry": "ghcr.io/mosharush",
+        "domain": "monox.dev",
+        "identityRef": "github-oidc",
+        "secretStoreRef": "external-secrets"
+      },
+      "clusterRef": "production-cluster"
     }
-  ]
+  },
+  "addons": {}
 }

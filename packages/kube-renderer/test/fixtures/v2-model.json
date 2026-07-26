@@ -1,0 +1,144 @@
+{
+  "environment": "production",
+  "target": {
+    "id": "production-gke",
+    "provider": "gcp",
+    "provisioner": "pulumi",
+    "transport": "kubernetes-api",
+    "runtime": "kubernetes",
+    "region": "example-region",
+    "projectRef": "example-project",
+    "clusterRef": "example-cluster",
+    "bindings": {
+      "namespace": "models-production",
+      "registry": "registry.invalid/example",
+      "identityRef": "example-runtime-identity",
+      "secretStoreRef": "example-runtime-secrets"
+    }
+  },
+  "deployment": {
+    "schemaVersion": "2",
+    "enabled": true,
+    "id": "embedding-model",
+    "kind": "model",
+    "suspended": false,
+    "build": {
+      "strategy": "dockerfile",
+      "dockerfile": "apps/embedding-model/Dockerfile",
+      "image": {
+        "repository": "registry.invalid/example/embedding-model",
+        "tag": "0.2.0"
+      }
+    },
+    "runtime": {
+      "language": "python",
+      "command": ["python", "-m", "app"]
+    },
+    "network": {
+      "exposure": "internal",
+      "ports": [
+        {
+          "name": "http",
+          "containerPort": 8080,
+          "servicePort": 80
+        },
+        {
+          "name": "metrics",
+          "containerPort": 9090,
+          "servicePort": 9090
+        }
+      ]
+    },
+    "probes": {
+      "startup": {
+        "type": "http",
+        "path": "/health/startup",
+        "port": "http",
+        "failureThreshold": 60
+      },
+      "readiness": {
+        "type": "http",
+        "path": "/health/ready",
+        "port": "http"
+      },
+      "liveness": {
+        "type": "http",
+        "path": "/health/live",
+        "port": "http"
+      }
+    },
+    "env": {
+      "values": {
+        "MODEL_CACHE": "/models"
+      },
+      "secretRefs": []
+    },
+    "resources": {
+      "requests": {
+        "cpu": "1",
+        "memory": "4Gi"
+      },
+      "limits": {
+        "cpu": "4",
+        "memory": "16Gi"
+      },
+      "accelerators": [
+        {
+          "type": "nvidia.com/gpu",
+          "count": 1
+        }
+      ]
+    },
+    "storage": [
+      {
+        "name": "model-cache",
+        "type": "persistent",
+        "mountPath": "/models",
+        "size": "100Gi",
+        "className": "model-cache"
+      }
+    ],
+    "identity": {
+      "serviceAccount": "embedding-model",
+      "workloadIdentity": "embedding-model@example.invalid"
+    },
+    "telemetry": {
+      "metrics": {
+        "enabled": true,
+        "path": "/metrics",
+        "port": 9090
+      }
+    },
+    "lifecycle": {
+      "terminationGracePeriodSeconds": 180
+    },
+    "scaling": {
+      "mode": "keda",
+      "minReplicas": 0,
+      "maxReplicas": 4,
+      "metrics": [
+        {
+          "type": "rps",
+          "target": 5,
+          "sourceRef": "http://prometheus.monitoring.svc.cluster.local:9090",
+          "metricName": "embedding_model_rps",
+          "query": "sum(rate(http_requests_total{service=\"embedding-model\"}[1m]))"
+        }
+      ]
+    },
+    "adapterOverrides": {
+      "kubernetes": {
+        "nodeSelector": {
+          "nvidia.com/gpu.present": "true"
+        },
+        "tolerations": [
+          {
+            "key": "nvidia.com/gpu",
+            "operator": "Exists",
+            "effect": "NoSchedule"
+          }
+        ]
+      }
+    }
+  }
+}

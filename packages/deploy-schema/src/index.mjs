@@ -1,5 +1,21 @@
 import { readFileSync } from 'node:fs';
 
+import { containsSecretMaterial, isSecretLikeKey } from './security.mjs';
+
+export {
+  DEPLOYMENT_SCHEMA_VERSION_V2,
+  DeploymentV2ValidationError,
+  assertValidDeploymentPatchV2,
+  assertValidDeploymentSpecV2,
+  deploymentSchemaV2,
+  deploymentV2AllowedProperties,
+  deploymentV2Enums,
+  normalizeDeploymentSpecV2,
+  validateDeploymentPatchV2,
+  validateDeploymentSpecV2,
+} from './v2.mjs';
+export { containsSecretMaterial, isSecretLikeKey, isSecretReferenceKey } from './security.mjs';
+
 export const DEPLOYMENT_SCHEMA_VERSION = '1';
 export const deploymentSchema = JSON.parse(
   readFileSync(new URL('../schema/v1/deployment.schema.json', import.meta.url), 'utf8')
@@ -13,7 +29,6 @@ const envNamePattern = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const quantityCpuPattern = /^(?:[1-9][0-9]*m|0\.[0-9]+|[1-9][0-9]*(?:\.[0-9]+)?)$/;
 const quantityMemoryPattern = /^[1-9][0-9]*(?:Ki|Mi|Gi|Ti)$/;
 const percentagePattern = /^(?:100|[1-9]?[0-9])%$/;
-const secretLikeNamePattern = /(?:^|_)(?:api_?key|credential|password|private_?key|secret|token)(?:$|_)/i;
 
 const allowed = {
   root: new Set([
@@ -238,6 +253,8 @@ function checkString(errors, path, value, options = {}) {
     addError(errors, path, `must contain at most ${options.maxLength} character(s)`, 'length');
   if (options.pattern && !options.pattern.test(value))
     addError(errors, path, 'has an invalid format', 'format');
+  if (containsSecretMaterial(value))
+    addError(errors, path, 'must not contain credential material', 'security');
 }
 
 function checkDnsLabel(errors, path, value) {
@@ -407,7 +424,7 @@ function checkAutoscaling(errors, value) {
     checkString(errors, `${path}.type`, trigger.type, { pattern: /^[a-z][a-z0-9-]*$/ });
     checkStringMap(errors, `${path}.metadata`, trigger.metadata);
     for (const key of Object.keys(trigger.metadata ?? {})) {
-      if (secretLikeNamePattern.test(key) && !/FromEnv$/i.test(key))
+      if (isSecretLikeKey(key))
         addError(
           errors,
           `${path}.metadata.${key}`,
@@ -486,7 +503,7 @@ export function validateDeploymentConfig(input) {
         checkString(errors, `${path}.value`, entry.value);
         if (names.has(entry.name)) addError(errors, `${path}.name`, 'must be unique', 'duplicate');
         names.add(entry.name);
-        if (secretLikeNamePattern.test(entry.name))
+        if (isSecretLikeKey(entry.name))
           addError(
             errors,
             `${path}.value`,

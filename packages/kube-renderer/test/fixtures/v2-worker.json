@@ -1,0 +1,116 @@
+{
+  "workspace": {
+    "name": "@example/queue-worker",
+    "location": "apps/queue-worker"
+  },
+  "environment": "production",
+  "variant": null,
+  "target": {
+    "id": "production-gke",
+    "provider": "gcp",
+    "provisioner": "pulumi",
+    "transport": "kubernetes-api",
+    "runtime": "kubernetes",
+    "region": "example-region",
+    "projectRef": "example-project",
+    "clusterRef": "example-cluster",
+    "bindings": {
+      "namespace": "example-production",
+      "registry": "registry.invalid/example",
+      "identityRef": "example-runtime-identity",
+      "secretStoreRef": "example-runtime-secrets"
+    }
+  },
+  "deployment": {
+    "schemaVersion": "2",
+    "enabled": true,
+    "id": "queue-worker",
+    "kind": "worker",
+    "suspended": false,
+    "build": {
+      "strategy": "dockerfile",
+      "dockerfile": "apps/queue-worker/Dockerfile",
+      "image": {
+        "repository": "registry.invalid/example/queue-worker",
+        "tag": "0.2.0-alpha.1"
+      }
+    },
+    "runtime": {
+      "language": "typescript",
+      "command": ["node", "dist/worker.mjs"]
+    },
+    "network": {
+      "exposure": "none",
+      "ports": []
+    },
+    "probes": {
+      "startup": {
+        "type": "exec",
+        "command": ["node", "dist/health.mjs", "startup"]
+      },
+      "readiness": {
+        "type": "exec",
+        "command": ["node", "dist/health.mjs", "ready"]
+      },
+      "liveness": {
+        "type": "exec",
+        "command": ["node", "dist/health.mjs", "live"]
+      }
+    },
+    "env": {
+      "values": {
+        "NODE_ENV": "production"
+      },
+      "secretRefs": [
+        {
+          "name": "queue-worker-runtime",
+          "provider": "kubernetes",
+          "key": "rabbitmq-url",
+          "target": "RABBITMQ_URL"
+        }
+      ]
+    },
+    "resources": {
+      "requests": {
+        "cpu": "250m",
+        "memory": "256Mi"
+      },
+      "limits": {
+        "cpu": "1",
+        "memory": "1Gi"
+      }
+    },
+    "storage": [],
+    "identity": {
+      "serviceAccount": "queue-worker"
+    },
+    "telemetry": {},
+    "lifecycle": {
+      "terminationGracePeriodSeconds": 300,
+      "preStopCommand": ["node", "dist/drain.mjs"],
+      "drain": {
+        "enabled": true,
+        "timeoutSeconds": 120
+      }
+    },
+    "scaling": {
+      "mode": "keda",
+      "minReplicas": 0,
+      "maxReplicas": 20,
+      "fallback": {
+        "failureThreshold": 3,
+        "replicas": 2
+      },
+      "metrics": [
+        {
+          "type": "rabbitmq",
+          "target": 5,
+          "sourceRef": "RABBITMQ_URL",
+          "queue": "jobs",
+          "authenticationRef": "queue-worker-scaler"
+        }
+      ]
+    },
+    "adapterOverrides": {}
+  }
+}

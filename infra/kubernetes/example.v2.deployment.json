@@ -1,0 +1,144 @@
+{
+  "$schema": "../../packages/deploy-schema/schema/v2/deployment.schema.json",
+  "schemaVersion": "2",
+  "enabled": true,
+  "id": "example-api",
+  "kind": "service",
+  "build": {
+    "strategy": "dockerfile",
+    "context": ".",
+    "dockerfile": "infra/docker/Dockerfile.node",
+    "image": {
+      "repository": "registry.invalid/example/api",
+      "tag": "0.2.0-alpha.1"
+    }
+  },
+  "runtime": {
+    "language": "typescript",
+    "framework": "fastify",
+    "command": ["node", "apps/api/src/server.mjs"],
+    "workingDirectory": "/workspace"
+  },
+  "network": {
+    "exposure": "public",
+    "ports": [
+      {
+        "name": "http",
+        "containerPort": 3000,
+        "servicePort": 80,
+        "protocol": "TCP"
+      },
+      {
+        "name": "metrics",
+        "containerPort": 9090,
+        "servicePort": 9090,
+        "protocol": "TCP"
+      }
+    ],
+    "routes": [
+      {
+        "host": "api.example.invalid",
+        "path": "/",
+        "pathType": "Prefix",
+        "tlsSecretRef": "example-api-tls"
+      }
+    ]
+  },
+  "probes": {
+    "startup": {
+      "type": "http",
+      "path": "/healthz",
+      "port": "http",
+      "failureThreshold": 30
+    },
+    "readiness": {
+      "type": "http",
+      "path": "/readyz",
+      "port": "http"
+    },
+    "liveness": {
+      "type": "http",
+      "path": "/healthz",
+      "port": "http",
+      "periodSeconds": 30
+    }
+  },
+  "env": {
+    "values": {
+      "NODE_ENV": "production"
+    },
+    "secretRefs": [
+      {
+        "name": "example-api-runtime",
+        "provider": "external-secrets",
+        "key": "database-url",
+        "target": "DATABASE_URL"
+      }
+    ]
+  },
+  "resources": {
+    "requests": {
+      "cpu": "100m",
+      "memory": "128Mi",
+      "ephemeralStorage": "256Mi"
+    },
+    "limits": {
+      "cpu": "500m",
+      "memory": "512Mi",
+      "ephemeralStorage": "1Gi"
+    },
+    "accelerators": []
+  },
+  "storage": [
+    {
+      "name": "cache",
+      "type": "ephemeral",
+      "mountPath": "/workspace/.cache",
+      "size": "512Mi"
+    }
+  ],
+  "identity": {
+    "serviceAccount": "example-api",
+    "automountServiceAccountToken": false
+  },
+  "telemetry": {
+    "metrics": {
+      "enabled": true,
+      "path": "/metrics",
+      "port": 9090
+    },
+    "traces": {
+      "enabled": true
+    },
+    "logs": {
+      "enabled": true
+    }
+  },
+  "lifecycle": {
+    "terminationGracePeriodSeconds": 60,
+    "preStopCommand": ["node", "apps/api/src/drain.mjs"],
+    "drain": {
+      "enabled": true,
+      "timeoutSeconds": 45
+    }
+  },
+  "scaling": {
+    "mode": "hpa",
+    "minReplicas": 2,
+    "maxReplicas": 12,
+    "metrics": [
+      {
+        "type": "cpu",
+        "target": 70
+      },
+      {
+        "type": "memory",
+        "target": 75
+      }
+    ],
+    "behavior": {
+      "scaleUpStabilizationSeconds": 0,
+      "scaleDownStabilizationSeconds": 300
+    }
+  }
+}

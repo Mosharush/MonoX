@@ -1,12 +1,14 @@
 {
   "name": "@monox/deploy-schema",
-  "version": "0.1.0",
+  "version": "0.2.0-alpha.1",
   "description": "Versioned, dependency-free deployment contract for MonoX applications.",
   "private": true,
   "type": "module",
+  "types": "./src/index.d.ts",
   "exports": {
     ".": "./src/index.mjs",
-    "./schema/v1": "./schema/v1/deployment.schema.json"
+    "./schema/v1": "./schema/v1/deployment.schema.json",
+    "./schema/v2": "./schema/v2/deployment.schema.json"
   },
   "files": [
     "schema",
@@ -15,7 +17,8 @@
   ],
   "scripts": {
     "build": "node ../../scripts/build-workspace.mjs",
-    "test": "node --test"
+    "test": "node --test",
+    "types:check": "node scripts/generate-types.mjs --check"
   },
   "engines": {
     "node": ">=22.22.2 <23.0.0 || >=24.15.0 <25.0.0 || >=26.0.0 <27.0.0"

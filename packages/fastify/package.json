@@ -1,0 +1,13 @@
+{
+  "name": "@monox/fastify",
+  "version": "0.2.0-alpha.1",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.mjs",
+  "scripts": {
+    "build": "node ../../scripts/build-workspace.mjs"
+  },
+  "dependencies": {
+    "@monox/app-runtime": "workspace:^"
+  }
+}

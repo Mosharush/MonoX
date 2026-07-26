@@ -1,6 +1,8 @@
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 
+import { resolveProjectDeployments, validateMonoXConfigV2 } from '../packages/config/src/index.mjs';
+import { validateDeploymentSpecV2 } from '../packages/deploy-schema/src/index.mjs';
 import { discoverWorkspaces } from '../packages/workspaces/src/index.mjs';
 
 const privateMarkers = (process.env.MONOX_PRIVATE_MARKERS ?? '')
@@ -54,6 +56,7 @@ function group(location) {
 const failures = [];
 const { root, workspaces } = await discoverWorkspaces();
 const byName = new Map(workspaces.map((workspace) => [workspace.name, workspace]));
+const deploymentIds = new Map();
 
 for (const workspace of workspaces) {
   if (workspace.name !== 'create-monox' && !workspace.name.startsWith('@monox/')) {
@@ -88,17 +91,46 @@ for (const workspace of workspaces) {
       failures.push(`${workspace.name}: infra cannot import application code (${dependency})`);
     }
   }
+
+  if (workspace.manifest.monox !== undefined) {
+    failures.push(
+      `${workspace.location}/package.json: legacy monox metadata is not allowed; use deployment v2`
+    );
+  }
+  if (workspace.manifest.deployment !== undefined) {
+    const result = validateDeploymentSpecV2(workspace.manifest.deployment);
+    for (const issue of result.errors) {
+      failures.push(`${workspace.location}/package.json:deployment${issue.path.slice(1)} ${issue.message}`);
+    }
+    if (result.valid && result.value.enabled) {
+      const previous = deploymentIds.get(result.value.id);
+      if (previous)
+        failures.push(
+          `${workspace.location}/package.json: deployment id ${result.value.id} duplicates ${previous}`
+        );
+      else deploymentIds.set(result.value.id, workspace.location);
+    }
+  }
 }
 
 const config = JSON.parse(await readFile(path.join(root, 'monox.config.json'), 'utf8'));
-if (!Array.isArray(config.applications) || config.applications.length === 0) {
-  failures.push('monox.config.json: at least one application is required');
+const configResult = validateMonoXConfigV2(config);
+for (const issue of configResult.errors) {
+  failures.push(`monox.config.json${issue.path.slice(1)} ${issue.message}`);
 }
-if (config.deployment?.autoscaling?.minReplicas > config.deployment?.autoscaling?.maxReplicas) {
-  failures.push('monox.config.json: autoscaling minReplicas cannot exceed maxReplicas');
+if (deploymentIds.size === 0) {
+  failures.push('repository must contain at least one enabled package.json deployment v2 block');
 }
-if (config.deployment?.autoscaling?.mode === 'hpa' && config.deployment.autoscaling.minReplicas < 1) {
-  failures.push('monox.config.json: HPA mode requires at least one replica; use KEDA for scale to zero');
+if (configResult.valid) {
+  for (const environment of Object.keys(config.environments)) {
+    try {
+      const resolution = await resolveProjectDeployments({ root, environment });
+      if (resolution.workloads.length === 0)
+        failures.push(`monox.config.json: ${environment} resolves no enabled workloads`);
+    } catch (error) {
+      failures.push(`monox.config.json: ${environment} resolution failed: ${error.message}`);
+    }
+  }
 }
 
 for (const relative of await listTextFiles(root)) {

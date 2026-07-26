@@ -107,8 +107,11 @@ jobs:
       - name: Verify the pinned trusted-publishing npm client
         run: npx --yes "npm@${NPM_CLI_VERSION}" --version
 
-      - name: Test package
-        run: yarn workspace create-monox test
+      - name: Run the complete repository gate
+        run: yarn check
+
+      - name: Reject high-severity dependency findings
+        run: yarn npm audit --all --recursive --severity high
 
       - name: Inspect package contents
         working-directory: packages/create-monox
@@ -116,7 +119,21 @@ jobs:
 
       - name: Publish with npm trusted publishing
         working-directory: packages/create-monox
-        run: npx --yes "npm@${NPM_CLI_VERSION}" publish --access public --provenance --workspaces=false
+        shell: bash
+        env:
+          PACKAGE_VERSION: ${{ steps.release.outputs.package_version }}
+        run: |
+          set -euo pipefail
+          if [[ "${PACKAGE_VERSION}" == *-* ]]; then
+            distribution_tag="next"
+          else
+            distribution_tag="latest"
+          fi
+          npx --yes "npm@${NPM_CLI_VERSION}" publish \
+            --access public \
+            --provenance \
+            --tag "${distribution_tag}" \
+            --workspaces=false
 
       - name: Verify the public registry artifact
         shell: bash

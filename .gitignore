@@ -22,3 +22,4 @@ Pulumi.*.yaml
 !Pulumi.example.yaml
 *.local.json
 *.log
+.monox/

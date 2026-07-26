@@ -1,6 +1,7 @@
 import { assertValidDeploymentConfig } from '@monox/deploy-schema';
 
 import { renderYamlDocuments } from './yaml.mjs';
+import { buildKubernetesResourcesV2 } from './v2.mjs';
 
 function compactObject(value) {
   if (Array.isArray(value)) return value.map(compactObject);
@@ -353,7 +354,7 @@ function kedaResource(config) {
   };
 }
 
-export function buildKubernetesResources(input) {
+function buildKubernetesResourcesV1(input) {
   const config = assertValidDeploymentConfig(input);
   const resources = [];
   if (config.createNamespace) resources.push(namespaceResource(config));
@@ -368,8 +369,15 @@ export function buildKubernetesResources(input) {
   return resources;
 }
 
+export function buildKubernetesResources(input) {
+  const candidate = input?.deployment ?? input;
+  if (String(candidate?.schemaVersion) === '2') return buildKubernetesResourcesV2(input);
+  return buildKubernetesResourcesV1(candidate);
+}
+
 export function renderKubernetesManifests(input) {
   return renderYamlDocuments(buildKubernetesResources(input));
 }
 
 export { renderYamlDocuments, toYaml } from './yaml.mjs';
+export { buildKubernetesResourcesV2 } from './v2.mjs';

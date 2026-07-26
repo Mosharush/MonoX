@@ -1,0 +1,220 @@
+[
+  {
+    "name": "node service class with probes and resources",
+    "input": {
+      "name": "boundary-api",
+      "type": "node",
+      "serviceClass": "critical-public",
+      "port": 8080,
+      "externalPort": 80,
+      "terminationGracePeriodSeconds": 120,
+      "startupHealthRoute": "/startup",
+      "healthRoute": "/ready",
+      "livenessHealthRoute": "/live",
+      "startupProbe": {
+        "initialDelaySeconds": 4,
+        "periodSeconds": 5,
+        "timeoutSeconds": 2,
+        "failureThreshold": 20
+      },
+      "readinessProbe": {
+        "initialDelaySeconds": 2,
+        "periodSeconds": 7,
+        "timeoutSeconds": 2,
+        "failureThreshold": 4
+      },
+      "livenessProbe": {
+        "initialDelaySeconds": 8,
+        "periodSeconds": 15,
+        "timeoutSeconds": 3,
+        "failureThreshold": 5
+      },
+      "resources": {
+        "cpu": { "request": "200m", "limit": "1" },
+        "mem": { "request": "256Mi", "limit": "1Gi" },
+        "nodeHeapMb": 768
+      },
+      "metrics": { "enabled": true, "path": "/metrics" },
+      "replicas_min": 2,
+      "replicas_max": 8,
+      "hpa": {
+        "cpu": { "utilization": 65 },
+        "mem": { "utilization": 72 }
+      }
+    },
+    "expected": {
+      "/output/kind": "service",
+      "/output/runtime/language": "javascript",
+      "/output/runtime/tuning/nodeHeapMb": "768",
+      "/output/network/exposure": "public",
+      "/output/network/ports/0/containerPort": 8080,
+      "/output/probes/startup/path": "/startup",
+      "/output/probes/startup/delaySeconds": 4,
+      "/output/probes/readiness/path": "/ready",
+      "/output/probes/liveness/path": "/live",
+      "/output/resources/requests/cpu": "200m",
+      "/output/resources/limits/memory": "1Gi",
+      "/output/lifecycle/terminationGracePeriodSeconds": 120,
+      "/output/scaling/metrics/0/type": "cpu",
+      "/output/scaling/metrics/1/type": "memory",
+      "/output/telemetry/metrics/enabled": true
+    },
+    "requiredCodes": [],
+    "forbiddenCodes": ["unknown", "required", "type", "format", "range"]
+  },
+  {
+    "name": "python queue worker with an explicit lifecycle contract",
+    "input": {
+      "name": "events-worker",
+      "type": "python",
+      "serviceClass": "background-worker",
+      "command": ["python", "-m", "worker"],
+      "pre_stop": ["python", "-m", "worker", "drain"],
+      "drain": true,
+      "drain_timeout": 180,
+      "probes": {
+        "readiness": { "type": "exec", "command": ["python", "-m", "worker", "ready"] },
+        "liveness": { "type": "exec", "command": ["python", "-m", "worker", "live"] }
+      },
+      "replicas_min": 0,
+      "replicas_max": 12,
+      "hpa": {
+        "queue_name": "jobs",
+        "average_value": 20,
+        "activation_value": 2,
+        "scale_only_on_queue": true
+      }
+    },
+    "expected": {
+      "/output/kind": "worker",
+      "/output/runtime/language": "python",
+      "/output/network/exposure": "none",
+      "/output/probes/readiness/type": "exec",
+      "/output/probes/liveness/type": "exec",
+      "/output/lifecycle/drain/enabled": true,
+      "/output/scaling/mode": "keda",
+      "/output/scaling/minReplicas": 0,
+      "/output/scaling/metrics/0/type": "rabbitmq",
+      "/output/scaling/metrics/0/target": 20,
+      "/output/scaling/metrics/0/metadata/activationValue": "2",
+      "/output/env/secretRefs/0/target": "RABBITMQ_URL"
+    },
+    "requiredCodes": ["secret-binding"],
+    "forbiddenCodes": ["worker-lifecycle", "unknown", "required", "type", "format", "range"]
+  },
+  {
+    "name": "static CDN fields become target-binding work",
+    "input": {
+      "name": "project-docs",
+      "type": "cdn",
+      "source": "public",
+      "target": "primary",
+      "bucket": "project-assets",
+      "cloudfrontId": "distribution-placeholder",
+      "providers": {
+        "aws": { "cloudfrontId": "distribution-placeholder" },
+        "gcp": { "bucket": "project-assets", "domain": "docs.example.invalid" }
+      },
+      "maxReplicas": 0
+    },
+    "expected": {
+      "/output/kind": "static",
+      "/output/build/strategy": "static",
+      "/output/build/output": "public",
+      "/output/network/exposure": "none",
+      "/output/suspended": true,
+      "/output/scaling/mode": "none",
+      "/output/scaling/maxReplicas": 1,
+      "/output/adapterOverrides": {}
+    },
+    "requiredCodes": ["target-binding"],
+    "forbiddenCodes": ["unmapped", "unknown", "required", "type", "format", "range"]
+  },
+  {
+    "name": "environment patches and side deployments",
+    "input": {
+      "name": "public-api",
+      "type": "node",
+      "serviceClass": "critical-public",
+      "port": 3000,
+      "replicas_min": 1,
+      "replicas_max": 5,
+      "hpa": { "cpu": { "utilization": 70 } },
+      "sideDeployments": [
+        {
+          "name": "canary",
+          "resources": {
+            "cpu": { "request": "100m", "limit": "500m" },
+            "mem": { "request": "128Mi", "limit": "512Mi" }
+          },
+          "pdb": { "minAvailable": 1 }
+        }
+      ],
+      "environments": {
+        "dev": {
+          "replicas": 1,
+          "resources": {
+            "cpu": { "request": "100m", "limit": "500m" },
+            "mem": { "request": "0.25Gi", "limit": "512Mi" }
+          }
+        },
+        "prod": {
+          "replicas_min": 2,
+          "replicas_max": 20,
+          "hpa": {
+            "enable_rps_scaling": true,
+            "requests_per_second": 120,
+            "unpauseAfterDeploy": true
+          },
+          "sideDeployments": [
+            {
+              "name": "canary",
+              "replicas_max": 2,
+              "env": { "FEATURE_MODE": "safe" }
+            }
+          ]
+        }
+      }
+    },
+    "expected": {
+      "/output/variants/canary/resources/requests/cpu": "100m",
+      "/output/variants/canary/environments/production/scaling/maxReplicas": 2,
+      "/output/variants/canary/environments/production/env/values/FEATURE_MODE": "safe",
+      "/output/environments/dev/scaling/minReplicas": 1,
+      "/output/environments/dev/resources/requests/memory": "262144Ki",
+      "/output/environments/production/scaling/mode": "keda",
+      "/output/environments/production/scaling/metrics/0/type": "rps",
+      "/output/environments/production/scaling/metrics/0/target": 120
+    },
+    "requiredCodes": ["pdb", "metric-source", "hidden-unpause", "semantic-diff"],
+    "forbiddenCodes": ["unknown", "required", "type", "format", "range"]
+  },
+  {
+    "name": "privileged and secret behavior remains gated",
+    "input": {
+      "name": "guarded-worker",
+      "type": "node",
+      "serviceClass": "singleton-worker",
+      "allow_pod_self_patch": true,
+      "kubernetesPatch": { "spec": { "replicas": 2 } },
+      "env": { "API_TOKEN": "synthetic-placeholder" },
+      "environments": {
+        "prod": { "hpa": { "unpauseAfterDeploy": true } }
+      }
+    },
+    "expected": {
+      "/output/kind": "worker",
+      "/output/network/exposure": "none",
+      "/output/env/values": {},
+      "/output/env/secretRefs": []
+    },
+    "requiredCodes": [
+      "security",
+      "privileged-self-patch",
+      "arbitrary-patch",
+      "hidden-unpause",
+      "worker-lifecycle"
+    ],
+    "forbiddenCodes": ["unknown", "required", "type", "format", "range"]
+  }
+]

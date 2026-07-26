@@ -1,0 +1,24 @@
+{
+  "name": "@monox/config",
+  "version": "0.2.0-alpha.1",
+  "description": "MonoX v2 project configuration discovery and resolution.",
+  "private": true,
+  "type": "module",
+  "types": "./src/index.d.ts",
+  "exports": "./src/index.mjs",
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node ../../scripts/build-workspace.mjs",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@monox/deploy-schema": "workspace:^",
+    "@monox/workspaces": "workspace:^"
+  },
+  "engines": {
+    "node": ">=22.22.2 <23.0.0 || >=24.15.0 <25.0.0 || >=26.0.0 <27.0.0"
+  }
+}

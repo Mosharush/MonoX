@@ -1,7 +1,7 @@
 {
   "name": "create-monox",
-  "version": "0.1.2",
-  "description": "Create a small, agent-friendly JavaScript monorepo with optional infrastructure templates.",
+  "version": "0.2.0-alpha.1",
+  "description": "Create a deterministic, polyglot, agent-ready monorepo with explicit delivery contracts.",
   "license": "MIT",
   "author": "Moshe Harush <moshe@haru.sh>",
   "keywords": [
@@ -12,6 +12,7 @@
     "scaffolding"
   ],
   "type": "module",
+  "types": "./src/generator.d.ts",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Mosharush/MonoX.git",
@@ -23,7 +24,21 @@
   },
   "bin": "src/cli.mjs",
   "exports": {
-    ".": "./src/generator.mjs"
+    ".": {
+      "types": "./src/generator.d.ts",
+      "import": "./src/generator.mjs",
+      "default": "./src/generator.mjs"
+    },
+    "./generator": {
+      "types": "./src/generator.d.ts",
+      "import": "./src/generator.mjs",
+      "default": "./src/generator.mjs"
+    },
+    "./catalog": {
+      "types": "./src/catalog.d.ts",
+      "import": "./src/catalog.mjs",
+      "default": "./src/catalog.mjs"
+    }
   },
   "files": [
     "src",
@@ -34,7 +49,10 @@
     "access": "public"
   },
   "scripts": {
-    "test": "node --test"
+    "test": "node --test && tsc --project type-tests/tsconfig.json"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3"
   },
   "engines": {
     "node": ">=22.22.2 <23.0.0 || >=24.15.0 <25.0.0 || >=26.0.0 <27.0.0"

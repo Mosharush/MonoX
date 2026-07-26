@@ -3,13 +3,13 @@ name: monox-local
 services:
   postgres:
     profiles: [local]
-    image: postgres:17.5-alpine
+    image: postgres:18.1-alpine@sha256:aa6eb304ddb6dd26df23d05db4e5cb05af8951cda3e0dc57731b771e0ef4ab29
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-monox}
       POSTGRES_USER: ${POSTGRES_USER:-monox}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-development-only}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run yarn local:env or set POSTGRES_PASSWORD}
     ports:
-      - '${POSTGRES_PORT:-5432}:5432'
+      - '127.0.0.1:${POSTGRES_PORT:-5432}:5432'
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -21,14 +21,26 @@ services:
 
   redis:
     profiles: [local]
-    image: redis:8.0.3-alpine
-    command: [redis-server, --appendonly, 'yes', --save, '60', '1']
+    image: redis:8.4.0-alpine@sha256:4eec4565e45aa0b3966554c866bc73211e281b0b3d89fe9a33c982e6faca809d
+    command:
+      [
+        redis-server,
+        --appendonly,
+        'yes',
+        --save,
+        '60',
+        '1',
+        --requirepass,
+        '${REDIS_PASSWORD:?Run yarn local:env or set REDIS_PASSWORD}',
+      ]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Run yarn local:env or set REDIS_PASSWORD}
     ports:
-      - '${REDIS_PORT:-6379}:6379'
+      - '127.0.0.1:${REDIS_PORT:-6379}:6379'
     volumes:
       - redis-data:/data
     healthcheck:
-      test: [CMD, redis-cli, ping]
+      test: [CMD-SHELL, 'redis-cli -a "$${REDIS_PASSWORD}" ping | grep PONG']
       interval: 5s
       timeout: 3s
       retries: 20
@@ -36,9 +48,9 @@ services:
 
   ollama:
     profiles: [local]
-    image: ollama/ollama:0.9.6
+    image: ollama/ollama:0.13.5@sha256:2c9595c555fd70a28363489ac03bd5bf9e7c5bdf2890373c3a830ffd7252ce6d
     ports:
-      - '${OLLAMA_PORT:-11434}:11434'
+      - '127.0.0.1:${OLLAMA_PORT:-11434}:11434'
     volumes:
       - ollama-data:/root/.ollama
     healthcheck:
@@ -59,11 +71,13 @@ services:
       MONOX_WORKSPACE: '@monox/api'
       MONOX_ENV: local
       PORT: 3000
-      DATABASE_URL: postgresql://${POSTGRES_USER:-monox}:${POSTGRES_PASSWORD:-local-development-only}@postgres:5432/${POSTGRES_DB:-monox}
-      REDIS_URL: redis://redis:6379
+      DATABASE_URL:
+        postgresql://${POSTGRES_USER:-monox}:${POSTGRES_PASSWORD:?Run yarn local:env or set
+        POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-monox}
+      REDIS_URL: redis://:${REDIS_PASSWORD:?Run yarn local:env or set REDIS_PASSWORD}@redis:6379
       OLLAMA_URL: http://ollama:11434
     ports:
-      - '${API_PORT:-3000}:3000'
+      - '127.0.0.1:${API_PORT:-3000}:3000'
     depends_on:
       postgres:
         condition: service_healthy
@@ -90,7 +104,7 @@ services:
       MONOX_WORKSPACE: '@monox/web'
       PORT: 3001
     ports:
-      - '${WEB_PORT:-3001}:3001'
+      - '127.0.0.1:${WEB_PORT:-3001}:3001'
     depends_on:
       api:
         condition: service_healthy

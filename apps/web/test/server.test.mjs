@@ -8,25 +8,42 @@ test('serves the starter page and health endpoint', async () => {
   const address = server.address();
   const baseUrl = `http://127.0.0.1:${address.port}`;
   try {
-    const page = await fetch(baseUrl);
+    const page = await fetch(`${baseUrl}/?lang=en`);
     assert.equal(page.status, 200);
     assert.match(page.headers.get('content-security-policy'), /script-src 'none'/);
+    assert.equal(page.headers.get('content-language'), 'en');
     const html = await page.text();
-    assert.match(html, /Explicit boundaries/);
-    assert.match(html, /Node 22 \/ 24 \/ 26/);
-    assert.match(html, /Public CI still runs repository rules/);
+    assert.match(html, /Generate the product and its delivery path together/);
+    assert.match(html, /What the command writes/);
+    assert.match(html, /What you do not need to wire by hand/);
     assert.match(html, /npmjs\.com\/package\/create-monox/);
-    assert.match(html, /npm create monox@latest -- my-product --yes/);
-    assert.match(html, /npx --yes corepack@0\.35\.0 yarn run dev:api/);
-    assert.match(html, /npx --yes corepack@0\.35\.0 yarn run dev:web/);
-    assert.doesNotMatch(html, /corepack enable|yarn install|yarn doctor|yarn dev --all/);
-    assert.match(html, /What MonoX is not/);
+    assert.match(html, /npm create monox@next -- my-product/);
+    assert.match(html, /monox\.lock/);
+    assert.match(html, /MonoX draws the boundary/);
     assert.match(html, /SoftwareSourceCode/);
-    assert.match(html, /href="#quick-start"/);
+    assert.match(html, /href="#command"/);
     assert.match(html, /https:\/\/monox\.dev\/og-image\.png/);
+    assert.match(html, /property="og:locale" content="en_US"/);
+    assert.match(html, /property="og:locale:alternate" content="he_IL"/);
     assert.match(html, /github\.com\/Mosharush\/MonoX/);
     assert.match(html, /https:\/\/monox\.dev\//);
-    assert.doesNotMatch(html, /remaining release gate/i);
+    assert.doesNotMatch(html, /infinite scale|unlimited capacity/i);
+    assert.doesNotMatch(html, /\u2014/);
+
+    const hebrewPage = await fetch(`${baseUrl}/?lang=he`);
+    assert.equal(hebrewPage.status, 200);
+    assert.equal(hebrewPage.headers.get('content-language'), 'he');
+    const hebrewHtml = await hebrewPage.text();
+    assert.match(hebrewHtml, /<html lang="he" dir="rtl">/);
+    assert.match(hebrewHtml, /מה כבר לא צריך לחבר ידנית/);
+    assert.match(hebrewHtml, /delivery path/);
+    assert.match(hebrewHtml, /property="og:locale" content="he_IL"/);
+    assert.match(hebrewHtml, /property="og:locale:alternate" content="en_US"/);
+    assert.match(hebrewHtml, /name="twitter:image" content="https:\/\/monox\.dev\/og-image\.png"/);
+    assert.doesNotMatch(hebrewHtml, /\u2014/);
+
+    const automaticHebrewPage = await fetch(baseUrl, { headers: { 'accept-language': 'he,en;q=0.8' } });
+    assert.equal(automaticHebrewPage.headers.get('content-language'), 'he');
 
     const icon = await fetch(`${baseUrl}/icon.svg`);
     assert.equal(icon.status, 200);
@@ -51,7 +68,17 @@ test('serves the starter page and health endpoint', async () => {
     assert.match(sitemap.headers.get('content-type'), /^application\/xml/);
 
     const health = await fetch(`${baseUrl}/healthz`);
-    assert.deepEqual(await health.json(), { status: 'ok' });
+    assert.deepEqual(await health.json(), {
+      name: '@monox/web',
+      version: '0.2.0-alpha.1',
+      ready: true,
+      live: true,
+      state: 'running',
+    });
+
+    const metrics = await fetch(`${baseUrl}/metrics`);
+    assert.equal(metrics.status, 200);
+    assert.match(await metrics.text(), /monox_http_requests_total/);
   } finally {
     await new Promise((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }

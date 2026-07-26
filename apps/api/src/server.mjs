@@ -1,6 +1,7 @@
 import { createServer } from 'node:http';
 import { pathToFileURL } from 'node:url';
 
+import { createAppRuntime } from '@monox/app-runtime';
 import { jsonResponse, normalizeEnvironment, requestId } from '@monox/shared';
 
 const securityHeaders = {
@@ -12,19 +13,25 @@ const securityHeaders = {
 export function createApiServer(options = {}) {
   const environment = normalizeEnvironment(options.environment ?? process.env.MONOX_ENV ?? 'local');
   const startedAt = Date.now();
+  const runtime = options.runtime ?? createAppRuntime({ name: '@monox/api', version: '0.2.0-alpha.1' });
 
-  return createServer((request, response) => {
+  const server = createServer((request, response) => {
+    const requestStartedAt = process.hrtime.bigint();
     const id = requestId(request.headers['x-request-id']);
     const url = new URL(request.url ?? '/', 'http://monox.local');
     const headers = { ...securityHeaders, 'x-request-id': id };
+    for (const [name, value] of Object.entries(securityHeaders)) response.setHeader(name, value);
 
-    if (request.method === 'GET' && url.pathname === '/healthz') {
-      return jsonResponse(response, 200, { status: 'ok' }, headers);
-    }
+    if (request.method === 'GET' && runtime.handleSystemRequest(request, response)) return;
 
-    if (request.method === 'GET' && url.pathname === '/readyz') {
-      return jsonResponse(response, 200, { status: 'ready', environment }, headers);
-    }
+    response.once('finish', () => {
+      runtime.observeRequest({
+        method: request.method,
+        route: url.pathname === '/api/hello' ? '/api/hello' : 'unmatched',
+        statusCode: response.statusCode,
+        durationSeconds: Number(process.hrtime.bigint() - requestStartedAt) / 1_000_000_000,
+      });
+    });
 
     if (request.method === 'GET' && url.pathname === '/api/hello') {
       return jsonResponse(
@@ -45,6 +52,10 @@ export function createApiServer(options = {}) {
 
     return jsonResponse(response, 404, { error: 'not_found', requestId: id }, headers);
   });
+
+  Object.defineProperty(server, 'monoxRuntime', { value: runtime });
+  runtime.attachServer(server);
+  return server;
 }
 
 export async function startApiServer(options = {}) {
@@ -57,13 +68,16 @@ export async function startApiServer(options = {}) {
     server.listen(port, host, resolve);
   });
 
+  server.monoxRuntime.setReady(true);
+
   return server;
 }
 
 const isEntryPoint = process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url;
 if (isEntryPoint) {
   const server = await startApiServer();
+  server.monoxRuntime.lifecycle.installSignalHandlers();
   const address = server.address();
   const port = typeof address === 'object' && address ? address.port : process.env.PORT;
-  console.log(`MonoX API listening on http://localhost:${port}`);
+  server.monoxRuntime.logger.info('HTTP server listening', { host: 'localhost', port });
 }

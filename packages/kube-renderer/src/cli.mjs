@@ -4,7 +4,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { validateDeploymentConfig } from '@monox/deploy-schema';
+import { validateDeploymentConfig, validateDeploymentSpecV2 } from '@monox/deploy-schema';
 
 import { renderKubernetesManifests } from './index.mjs';
 
@@ -53,7 +53,11 @@ export async function run(argv = process.argv.slice(2), io = {}) {
   const config = await loadConfig(inputPath);
 
   if (command === 'validate') {
-    const result = validateDeploymentConfig(config);
+    const candidate = config.deployment ?? config;
+    const result =
+      String(candidate?.schemaVersion) === '2'
+        ? validateDeploymentSpecV2(candidate)
+        : validateDeploymentConfig(candidate);
     if (!result.valid) {
       const details = result.errors.map((error) => `- ${error.path}: ${error.message}`).join('\n');
       throw new TypeError(`Invalid deployment configuration:\n${details}`);

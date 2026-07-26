@@ -1,6 +1,6 @@
 {
   "name": "monox",
-  "version": "0.1.2",
+  "version": "0.2.0-alpha.1",
   "private": true,
   "description": "Agent-ready JavaScript monorepo starter and deployment toolkit with explicit architecture boundaries.",
   "license": "MIT",
@@ -24,7 +24,7 @@
   ],
   "scripts": {
     "build": "node scripts/run-workspaces.mjs build",
-    "check": "yarn format:check && yarn lint && yarn test && yarn build && yarn infra:check",
+    "check": "yarn format:check && yarn lint && yarn monox:validate && yarn test && yarn build && yarn infra:check",
     "create": "node packages/create-monox/src/cli.mjs",
     "dev": "node packages/mono-runner/src/cli.mjs",
     "dev:all": "node packages/mono-runner/src/cli.mjs --all",
@@ -33,6 +33,9 @@
     "format:check": "prettier --check .",
     "infra:check": "node scripts/validate-infra.mjs",
     "lint": "node scripts/validate-repository.mjs",
+    "local:env": "node scripts/local-env.mjs",
+    "monox": "node packages/cli/src/cli.mjs",
+    "monox:validate": "node packages/cli/src/cli.mjs validate --root .",
     "test": "node --test",
     "workspaces:list": "node packages/workspaces/src/cli.mjs"
   },

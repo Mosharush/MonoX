@@ -1,0 +1,198 @@
+[
+  {
+    "name": "stateless service",
+    "input": {
+      "name": "catalog-api",
+      "type": "typescript",
+      "context": ".",
+      "dockerfile": "Dockerfile",
+      "command": ["node", "dist/server.mjs"],
+      "port": 3000,
+      "service_port": 80,
+      "public": true,
+      "domain": "api.example.invalid",
+      "health_path": "/healthz",
+      "cpu_request": "100m",
+      "memory_request": "128Mi",
+      "cpu_limit": "500m",
+      "memory_limit": "512Mi",
+      "replicas_min": 2,
+      "replicas_max": 6,
+      "cpu_target": 70
+    },
+    "expected": {
+      "/output/id": "catalog-api",
+      "/output/kind": "service",
+      "/output/build/strategy": "dockerfile",
+      "/output/runtime/language": "typescript",
+      "/output/network/exposure": "public",
+      "/output/probes/readiness/path": "/healthz",
+      "/output/scaling/mode": "hpa",
+      "/output/scaling/minReplicas": 2,
+      "/output/scaling/maxReplicas": 6,
+      "/output/scaling/metrics/0/type": "cpu",
+      "/output/scaling/metrics/0/target": 70
+    },
+    "manualReviewCodes": ["target-binding"]
+  },
+  {
+    "name": "queue worker",
+    "input": {
+      "name": "events-worker",
+      "type": "queue-worker",
+      "language": "typescript",
+      "command": ["node", "dist/worker.mjs"],
+      "queue": "events",
+      "queue_length": 25,
+      "replicas_min": 0,
+      "replicas_max": 20,
+      "pre_stop": ["node", "dist/drain.mjs"],
+      "drain": true,
+      "drain_timeout": 240,
+      "termination_grace_period": 300
+    },
+    "expected": {
+      "/output/kind": "worker",
+      "/output/network/exposure": "none",
+      "/output/network/ports": [],
+      "/output/lifecycle/drain/enabled": true,
+      "/output/lifecycle/drain/timeoutSeconds": 240,
+      "/output/lifecycle/terminationGracePeriodSeconds": 300,
+      "/output/scaling/mode": "keda",
+      "/output/scaling/minReplicas": 0,
+      "/output/scaling/maxReplicas": 20,
+      "/output/scaling/metrics/0/type": "rabbitmq",
+      "/output/scaling/metrics/0/sourceRef": "RABBITMQ_URL",
+      "/output/scaling/metrics/0/queue": "events",
+      "/output/scaling/metrics/0/target": 25,
+      "/output/env/secretRefs/0/name": "rabbitmq-connection",
+      "/output/env/secretRefs/0/target": "RABBITMQ_URL"
+    },
+    "manualReviewCodes": ["secret-binding", "worker-lifecycle"]
+  },
+  {
+    "name": "long worker with bounded drain",
+    "input": {
+      "name": "export-worker",
+      "type": "worker",
+      "language": "python",
+      "command": ["uv", "run", "python", "-m", "export_worker"],
+      "replicas_min": 1,
+      "replicas_max": 8,
+      "cpu_target": 65,
+      "pre_stop": ["uv", "run", "python", "-m", "export_worker.drain"],
+      "drain_timeout": 600,
+      "termination_grace_period": 660
+    },
+    "expected": {
+      "/output/kind": "worker",
+      "/output/runtime/language": "python",
+      "/output/lifecycle/drain/enabled": true,
+      "/output/lifecycle/drain/timeoutSeconds": 600,
+      "/output/lifecycle/terminationGracePeriodSeconds": 660,
+      "/output/scaling/mode": "hpa",
+      "/output/scaling/metrics/0/type": "cpu",
+      "/output/scaling/metrics/0/target": 65
+    },
+    "manualReviewCodes": ["worker-lifecycle"]
+  },
+  {
+    "name": "GPU model",
+    "input": {
+      "name": "embedding-model",
+      "type": "gpu-model",
+      "language": "python",
+      "command": ["uv", "run", "uvicorn", "model.main:app"],
+      "port": 8000,
+      "public": false,
+      "health_path": "/health",
+      "gpu": { "count": 1, "model": "l4" },
+      "cpu_request": "1",
+      "memory_request": "4Gi",
+      "cpu_limit": "2",
+      "memory_limit": "8Gi",
+      "replicas_min": 1,
+      "replicas_max": 3,
+      "cpu_target": 75
+    },
+    "expected": {
+      "/output/kind": "model",
+      "/output/network/exposure": "internal",
+      "/output/resources/accelerators/0/type": "nvidia.com/gpu",
+      "/output/resources/accelerators/0/count": 1,
+      "/output/resources/accelerators/0/model": "l4",
+      "/output/resources/requests/memory": "4Gi",
+      "/output/scaling/maxReplicas": 3
+    },
+    "manualReviewCodes": []
+  },
+  {
+    "name": "static CDN candidate",
+    "input": {
+      "name": "docs-web",
+      "type": "frontend",
+      "language": "typescript",
+      "output": "dist",
+      "public": true,
+      "domain": "docs.example.invalid",
+      "path": "/",
+      "replicas_min": 1,
+      "replicas_max": 1
+    },
+    "expected": {
+      "/output/kind": "static",
+      "/output/build/strategy": "static",
+      "/output/build/output": "dist",
+      "/output/network/exposure": "public",
+      "/output/scaling/mode": "none"
+    },
+    "manualReviewCodes": ["target-binding"]
+  },
+  {
+    "name": "explicitly suspended service",
+    "input": {
+      "name": "archive-api",
+      "type": "service",
+      "language": "javascript",
+      "command": ["node", "server.mjs"],
+      "port": 3000,
+      "replicas_min": 0,
+      "replicas_max": 0
+    },
+    "expected": {
+      "/output/kind": "service",
+      "/output/suspended": true,
+      "/output/scaling/mode": "none",
+      "/output/scaling/minReplicas": 1,
+      "/output/scaling/maxReplicas": 1
+    },
+    "manualReviewCodes": [],
+    "changeActions": ["replaced"]
+  },
+  {
+    "name": "deployment variants",
+    "input": {
+      "name": "media-api",
+      "type": "service",
+      "language": "javascript",
+      "command": ["node", "server.mjs"],
+      "port": 3000,
+      "replicas_min": 2,
+      "replicas_max": 10,
+      "cpu_target": 70,
+      "sideDeployments": {
+        "canary": {
+          "replicas_max": 2,
+          "cpu_limit": "250m",
+          "memory_limit": "256Mi"
+        }
+      }
+    },
+    "expected": {
+      "/output/variants/canary/scaling/maxReplicas": 2,
+      "/output/variants/canary/resources/limits/cpu": "250m",
+      "/output/variants/canary/resources/limits/memory": "256Mi"
+    },
+    "manualReviewCodes": ["semantic-diff"]
+  }
+]

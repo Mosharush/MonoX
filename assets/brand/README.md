@@ -9,7 +9,7 @@ MonoX turns defined boundaries into a dependable delivery path.
 - The yellow diamond is the contract junction.
 - The right-side terminal makes the output direction explicit.
 
-Approved tagline: `Boundaries in. Path out.`
+Approved descriptor: `Monorepo starter and delivery contracts for people, CI and coding agents.`
 
 Always write the name as `MonoX`.
 

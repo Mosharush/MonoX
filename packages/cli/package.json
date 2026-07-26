@@ -1,0 +1,36 @@
+{
+  "name": "@monox/cli",
+  "version": "0.2.0-alpha.1",
+  "description": "Validate, explain, plan and safely execute MonoX delivery workflows.",
+  "private": true,
+  "type": "module",
+  "types": "./src/index.d.ts",
+  "bin": {
+    "monox": "./src/cli.mjs"
+  },
+  "exports": "./src/index.mjs",
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node ../../scripts/build-workspace.mjs",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@monox/affected": "workspace:^",
+    "@monox/cloudapter-coolify": "workspace:^",
+    "@monox/cloudapter-core": "workspace:^",
+    "@monox/cloudapter-kubernetes": "workspace:^",
+    "@monox/cloudapter-local": "workspace:^",
+    "@monox/cloudapter-pm2": "workspace:^",
+    "@monox/cloudapter-static": "workspace:^",
+    "@monox/config": "workspace:^",
+    "@monox/deploy-schema": "workspace:^",
+    "@monox/provider-aws": "workspace:^",
+    "@monox/provider-gcp": "workspace:^"
+  },
+  "engines": {
+    "node": ">=22.22.2 <23.0.0 || >=24.15.0 <25.0.0 || >=26.0.0 <27.0.0"
+  }
+}
