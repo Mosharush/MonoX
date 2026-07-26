@@ -542,7 +542,7 @@ function ciWorkflow(options) {
     ? '      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0\n        with:\n          go-version: 1.25.3\n          cache: false\n'
     : '';
   const phpSetup = hasPhp
-    ? "      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2\n        with:\n          php-version: '8.4'\n          tools: composer:2.8.12\n          coverage: none\n"
+    ? "      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2\n        with:\n          php-version: '8.4'\n          tools: composer:2.10.2\n          coverage: none\n"
     : '';
   const pythonSetup = hasPython
     ? '      - run: python3 -m pip install --disable-pip-version-check uv==0.9.7\n      - run: uv python install 3.13.9\n'
@@ -613,7 +613,7 @@ function dockerfileFor(options, workspace) {
       workspace.template === 'php-laravel-api'
         ? 'ENV APP_ENV=production APP_DEBUG=false LOG_CHANNEL=stderr VIEW_COMPILED_PATH=/tmp\n'
         : '';
-    return `FROM composer:2.8.12@sha256:5248900ab8b5f7f880c2d62180e40960cd87f60149ec9a1abfd62ac72a02577c AS dependencies\nWORKDIR /workspace\nCOPY ${directory} .\nRUN test -f composer.lock\nRUN composer install --no-dev --no-interaction --classmap-authoritative --no-scripts\n${laravelBootstrap}FROM php:8.4.13-cli-bookworm@sha256:e61b50da049acc7b991e3dedac62523924a363c4d7ffae508b8a2d082686861c\nWORKDIR /workspace\nCOPY --from=dependencies /workspace .\n${laravelRuntime}USER 10001:10001\nCMD ${JSON.stringify(command)}\n`;
+    return `FROM composer:2.10.2@sha256:5946476338742b200bb9ff88f8be56275ddae4b3949c72305cb0dbf10cfcb760 AS dependencies\nWORKDIR /workspace\nCOPY ${directory} .\nRUN test -f composer.lock\nRUN composer install --no-dev --no-interaction --classmap-authoritative --no-scripts\n${laravelBootstrap}FROM php:8.4.13-cli-bookworm@sha256:e61b50da049acc7b991e3dedac62523924a363c4d7ffae508b8a2d082686861c\nWORKDIR /workspace\nCOPY --from=dependencies /workspace .\n${laravelRuntime}USER 10001:10001\nCMD ${JSON.stringify(command)}\n`;
   }
   if (definition.family === 'go') {
     const checksumGate = workspace.template === 'go-chi-api' ? 'RUN test -f go.sum\n' : '';

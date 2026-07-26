@@ -663,6 +663,8 @@ test('pins polyglot build images and generates executable root bootstrap command
     const workflow = await readFile(join(destination, '.github/workflows/ci.yml'), 'utf8');
     assert.match(workflow, /actions\/setup-go@[a-f0-9]{40}/);
     assert.match(workflow, /shivammathur\/setup-php@[a-f0-9]{40}/);
+    assert.match(workflow, /tools: composer:2\.10\.2/);
+    assert.doesNotMatch(workflow, /composer:2\.(?:8\.12|9\.8)/);
     assert.match(workflow, /uv python install 3\.13\.9/);
     assert.match(workflow, /bootstrap:toolchains/);
 
@@ -673,6 +675,11 @@ test('pins polyglot build images and generates executable root bootstrap command
       }
     }
     const phpDockerfile = await readFile(join(destination, 'infra/docker/backend.Dockerfile'), 'utf8');
+    assert.match(
+      phpDockerfile,
+      /FROM composer:2\.10\.2@sha256:5946476338742b200bb9ff88f8be56275ddae4b3949c72305cb0dbf10cfcb760/
+    );
+    assert.doesNotMatch(phpDockerfile, /composer:2\.(?:8\.12|9\.8)/);
     assert.match(phpDockerfile, /RUN test -f composer\.lock/);
     assert.match(phpDockerfile, /composer install .*--no-scripts/);
     assert.match(phpDockerfile, /RUN php artisan package:discover --ansi/);
