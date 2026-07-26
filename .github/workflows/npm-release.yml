@@ -22,6 +22,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     environment: npm
+    outputs:
+      package_version: ${{ steps.release.outputs.package_version }}
+      source_sha: ${{ steps.release.outputs.source_sha }}
     permissions:
       contents: read
       id-token: write
@@ -94,6 +97,7 @@ jobs:
           fi
 
           echo "package_version=${package_version}" >> "${GITHUB_OUTPUT}"
+          echo "source_sha=${source_sha}" >> "${GITHUB_OUTPUT}"
 
       - name: Install pinned Corepack
         run: npm install --global corepack@0.35.0
@@ -117,7 +121,55 @@ jobs:
         working-directory: packages/create-monox
         run: npx --yes "npm@${NPM_CLI_VERSION}" pack --dry-run --json --workspaces=false
 
+      - name: Inspect existing registry version
+        id: registry
+        shell: bash
+        env:
+          PACKAGE_VERSION: ${{ steps.release.outputs.package_version }}
+          SOURCE_SHA: ${{ steps.release.outputs.source_sha }}
+        run: |
+          set -euo pipefail
+
+          for attempt in 1 2 3; do
+            registry_cache="$(mktemp -d)"
+            registry_error="$(mktemp)"
+            if registry_record="$(
+              NPM_CONFIG_CACHE="${registry_cache}" \
+                npx --yes "npm@${NPM_CLI_VERSION}" view \
+                  "create-monox@${PACKAGE_VERSION}" version gitHead \
+                  --json \
+                  --workspaces=false 2>"${registry_error}"
+            )"; then
+              registry_version="$(
+                REGISTRY_RECORD="${registry_record}" node --input-type=module -e \
+                  "const raw = JSON.parse(process.env.REGISTRY_RECORD); const data = Array.isArray(raw) ? raw[0] : raw; process.stdout.write(data?.version ?? '')"
+              )"
+              registry_git_head="$(
+                REGISTRY_RECORD="${registry_record}" node --input-type=module -e \
+                  "const raw = JSON.parse(process.env.REGISTRY_RECORD); const data = Array.isArray(raw) ? raw[0] : raw; process.stdout.write(data?.gitHead ?? '')"
+              )"
+              if [[ "${registry_version}" != "${PACKAGE_VERSION}" || "${registry_git_head}" != "${SOURCE_SHA}" ]]; then
+                echo "Existing registry release does not match the tagged source." >&2
+                exit 1
+              fi
+              echo "exists=true" >> "${GITHUB_OUTPUT}"
+              exit 0
+            fi
+
+            if ! grep -Eq 'E404|ETARGET|notarget' "${registry_error}"; then
+              cat "${registry_error}" >&2
+              echo "Registry state could not be determined safely." >&2
+              exit 1
+            fi
+            if [[ "${attempt}" -lt 3 ]]; then
+              sleep 5
+            fi
+          done
+
+          echo "exists=false" >> "${GITHUB_OUTPUT}"
+
       - name: Publish with npm trusted publishing
+        if: steps.registry.outputs.exists != 'true'
         working-directory: packages/create-monox
         shell: bash
         env:
@@ -135,46 +187,13 @@ jobs:
             --tag "${distribution_tag}" \
             --workspaces=false
 
-      - name: Verify the public registry artifact
-        shell: bash
-        env:
-          PACKAGE_VERSION: ${{ steps.release.outputs.package_version }}
-        run: |
-          set -euo pipefail
-
-          registry_version=""
-          for attempt in {1..12}; do
-            registry_version="$(
-              npx --yes "npm@${NPM_CLI_VERSION}" view \
-                "create-monox@${PACKAGE_VERSION}" version \
-                --workspaces=false 2>/dev/null || true
-            )"
-            if [[ "${registry_version}" == "${PACKAGE_VERSION}" ]]; then
-              break
-            fi
-            if [[ "${attempt}" -eq 12 ]]; then
-              echo "create-monox@${PACKAGE_VERSION} did not become readable from the public registry." >&2
-              exit 1
-            fi
-            sleep 10
-          done
-
-          smoke_root="$(mktemp -d)"
-          cd "${smoke_root}"
-          npx --yes "npm@${NPM_CLI_VERSION}" create "monox@${PACKAGE_VERSION}" -- \
-            registry-smoke \
-            --yes \
-            --package-manager npm \
-            --infra all \
-            --no-git
-
-          cd registry-smoke
-          generated_npm_version="$(
-            node --input-type=module -e "
-              import data from './package.json' with { type: 'json' };
-              const match = /^npm@(.+)$/.exec(data.packageManager ?? '');
-              if (!match) process.exit(1);
-              process.stdout.write(match[1]);
-            "
-          )"
-          npx --yes "npm@${generated_npm_version}" test
+  verify:
+    name: Verify the public npm release without publishing authority
+    needs: publish
+    permissions:
+      contents: read
+    uses: ./.github/workflows/npm-release-verification.yml
+    with:
+      package_version: ${{ needs.publish.outputs.package_version }}
+      release_tag: ${{ github.ref_name }}
+      source_sha: ${{ needs.publish.outputs.source_sha }}
