@@ -4,6 +4,13 @@ All notable changes will be documented here.
 
 ## Unreleased
 
+## 0.2.0 - 2026-07-26
+
+Version 0.2.0 stabilizes deterministic project generation, package-owned deployment contracts and the
+source-tested offline planning and rendering surface. Remote infrastructure execution is not promoted to
+stable support: PM2, SSH, Coolify and Kubernetes remain guarded behind injected transports, while AWS and
+Google Cloud providers remain plan-only.
+
 ### Added
 
 - Package-owned deployment contract v2 with strict JSON Schema, generated TypeScript declarations and a
@@ -41,8 +48,8 @@ All notable changes will be documented here.
   `applications[]` list.
 - Replaced legacy zero-maximum-replica parking with explicit `suspended: true`.
 - Replaced side deployments with deterministic variants and provider fields with target bindings.
-- Bumped source and `create-monox` metadata to `0.2.0-alpha.1`. A prerelease tag and npm publish remain gated
-  by the complete acceptance suite and security prerequisites.
+- Promoted the deterministic generator and offline contracts to `0.2.0`, published through the protected npm
+  workflow under `latest` only when the exact release tag and source commit match.
 - Aligned Nuxt 4 with its project-reference TypeScript layout and Angular 22 with the current `@angular/build`
   builder.
 - Namespaced generated Python distributions and modules so workspace names such as `fastapi` cannot shadow a
@@ -64,7 +71,9 @@ All notable changes will be documented here.
 
 ### Known limitations
 
-- AWS and Google Cloud packages are plan-only in this alpha and do not invoke Pulumi Automation API.
+- `create-monox@0.2.0` does not install the source-tree `@monox/cli`; generated projects receive deployment
+  contracts and fail-closed placeholders, while the delivery CLI remains npm-private.
+- AWS and Google Cloud packages are plan-only in 0.2.0 and do not invoke Pulumi Automation API.
 - PM2, SSH, Coolify and Kubernetes adapters have not completed their live acceptance matrices.
 - Kubernetes add-on chart coordinates and digests remain intentionally unverified and non-executable.
 - The private production reference has not completed a MonoX 0.2 canary and proven rollback, so it is not yet

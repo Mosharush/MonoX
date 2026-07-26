@@ -93,6 +93,7 @@ jobs:
           PACKAGE_VERSION: ${{ steps.release.outputs.package_version }}
           RELEASE_TAG: ${{ inputs.release_tag }}
           SOURCE_SHA: ${{ steps.release.outputs.source_sha }}
+          VERIFY_DIST_TAG: ${{ github.event_name != 'workflow_dispatch' }}
         run: |
           set -euo pipefail
 
@@ -144,6 +145,43 @@ jobs:
             fi
             sleep 10
           done
+
+          if [[ "${VERIFY_DIST_TAG}" == "true" ]]; then
+            if [[ "${PACKAGE_VERSION}" == *-* ]]; then
+              expected_dist_tag="next"
+            else
+              expected_dist_tag="latest"
+            fi
+            for attempt in {1..18}; do
+              tag_cache="$(mktemp -d)"
+              tag_record="$(
+                NPM_CONFIG_CACHE="${tag_cache}" \
+                  npx --yes "npm@${NPM_CLI_VERSION}" view \
+                    create-monox dist-tags \
+                    --json \
+                    --workspaces=false 2>/dev/null || true
+              )"
+              if DIST_TAG_RECORD="${tag_record}" \
+                EXPECTED_DIST_TAG="${expected_dist_tag}" \
+                PACKAGE_VERSION="${PACKAGE_VERSION}" \
+                node --input-type=module -e "
+                  try {
+                    const raw = JSON.parse(process.env.DIST_TAG_RECORD);
+                    const tags = Array.isArray(raw) ? raw[0] : raw;
+                    process.exit(tags?.[process.env.EXPECTED_DIST_TAG] === process.env.PACKAGE_VERSION ? 0 : 1);
+                  } catch {
+                    process.exit(1);
+                  }
+                "; then
+                break
+              fi
+              if [[ "${attempt}" -eq 18 ]]; then
+                echo "npm dist-tag ${expected_dist_tag} does not point to ${PACKAGE_VERSION}." >&2
+                exit 1
+              fi
+              sleep 10
+            done
+          fi
 
           package_integrity="$(
             REGISTRY_RECORD="${registry_record}" node --input-type=module -e \

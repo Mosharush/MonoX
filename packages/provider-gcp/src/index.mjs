@@ -109,14 +109,14 @@ function confirmation(context) {
 
 function unsupportedMutation(operation) {
   throw new TypeError(
-    `GCP provider is plan-only in MonoX 0.2 alpha; ${operation} is unsupported and no infrastructure changes were made`
+    `GCP provider is plan-only in MonoX 0.2.0; ${operation} is unsupported and no infrastructure changes were made`
   );
 }
 
 export class GcpProviderCloudapter {
   constructor() {
     this.id = 'provider-gcp';
-    this.version = '0.2.0-alpha.1';
+    this.version = '0.2.0';
     this.apiVersion = '1';
     this.capabilities = [
       'artifact-registry',
@@ -158,7 +158,7 @@ export class GcpProviderCloudapter {
         status: target.bindings?.secretStoreRef ? 'pass' : 'fail',
         message: 'target.bindings.secretStoreRef is required',
       },
-      { id: 'execution', status: 'warning', message: '0.2 alpha provider is plan-only' },
+      { id: 'execution', status: 'warning', message: '0.2.0 provider is plan-only' },
     ];
     return { ok: checks.every((check) => check.status !== 'fail'), checks };
   }
@@ -183,7 +183,7 @@ export class GcpProviderCloudapter {
     } catch (error) {
       errors.push(error.message);
     }
-    return { valid: errors.length === 0, errors, warnings: ['GCP provider alpha is plan-only'] };
+    return { valid: errors.length === 0, errors, warnings: ['GCP provider 0.2.0 is plan-only'] };
   }
 
   async plan(context) {

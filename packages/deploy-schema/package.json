@@ -1,6 +1,6 @@
 {
   "name": "@monox/deploy-schema",
-  "version": "0.2.0-alpha.1",
+  "version": "0.2.0",
   "description": "Versioned, dependency-free deployment contract for MonoX applications.",
   "private": true,
   "type": "module",

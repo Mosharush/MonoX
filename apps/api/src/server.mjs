@@ -13,7 +13,7 @@ const securityHeaders = {
 export function createApiServer(options = {}) {
   const environment = normalizeEnvironment(options.environment ?? process.env.MONOX_ENV ?? 'local');
   const startedAt = Date.now();
-  const runtime = options.runtime ?? createAppRuntime({ name: '@monox/api', version: '0.2.0-alpha.1' });
+  const runtime = options.runtime ?? createAppRuntime({ name: '@monox/api', version: '0.2.0' });
 
   const server = createServer((request, response) => {
     const requestStartedAt = process.hrtime.bigint();

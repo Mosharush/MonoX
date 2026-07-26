@@ -28,11 +28,11 @@ environment.
   24, and 26. It also runs dependency review, dependency audit, full-history secret scanning and generates an
   SPDX JSON source SBOM. Dependency review requires a public repository or the corresponding GitHub security
   entitlement.
-- `alpha-acceptance.yml` verifies the seven synthetic migration goldens and generates one representative Node,
-  Python, PHP and Go project. It installs each selected toolchain, verifies `monox.lock`, builds and tests the
-  workspaces, then starts the Node, Python and Laravel APIs and probes their health endpoints. A separate job
-  exercises the built-in local Cloudapter through doctor, deploy, an explicit health probe, status and
-  owned-service destroy. This is representative coverage, not the complete catalog matrix.
+- `release-acceptance.yml` verifies the seven synthetic migration goldens and generates one representative
+  Node, Python, PHP and Go project. It installs each selected toolchain, verifies `monox.lock`, builds and
+  tests the workspaces, then starts the Node, Python and Laravel APIs and probes their health endpoints. A
+  separate job exercises the built-in local Cloudapter through doctor, deploy, an explicit health probe,
+  status and owned-service destroy. This is representative coverage, not the complete catalog matrix.
 - `catalog-matrix.yml` is scheduled weekly and can be started manually. It generates every one of the 24
   bundled workspace recipes in isolation, installs the selected toolchain, verifies the lock, runs tests and
   builds. It then runs the shared acceptance helper, which probes services, checks workers, waits for jobs and
@@ -52,10 +52,11 @@ environment.
   continue to block publication.
 
 `create-monox` exists on npm under the `mosharush` maintainer account. Version 0.1.0 was the first release
-from this public repository and upgraded the historical 0.0.5 package in place. The public `latest` tag is
-currently 0.1.2; the 0.2 source stays on an alpha prerelease until the release gates are complete. Releases
-keep the `https://github.com/Mosharush/MonoX` metadata, include the MIT license in the tarball, and use
-trusted publishing with registry provenance.
+from this public repository and upgraded the historical 0.0.5 package in place. Stable releases publish under
+`latest`; prereleases publish under `next`. Verification waits for registry propagation, checks the expected
+dist-tag, signed provenance and exact Git commit, then runs a clean-cache consumer. Releases keep the
+`https://github.com/Mosharush/MonoX` metadata, include the MIT license in the tarball, and use trusted
+publishing without a long-lived npm token.
 
 CodeQL uses GitHub default setup with JavaScript and TypeScript analysis. Keep that repository-level setup
 instead of adding a duplicate advanced workflow.

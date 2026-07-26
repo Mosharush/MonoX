@@ -19,7 +19,8 @@ authorizes state-changing commands with an explicit environment and workload sel
 requires the protected-environment and external-identity gates.
 
 Runnable workspaces own `package.json.deployment`. Agents must not recreate a root application list or place
-provider credentials in a workload patch. Use `monox config explain` to inspect the effective contract before
-changing a profile, environment or variant.
+provider credentials in a workload patch. From a MonoX source checkout, use `yarn monox config explain` to
+inspect the effective contract before changing a profile, environment or variant. The public generator does
+not install the source-tree delivery CLI in generated projects.
 
 See [ADR 0003](adr/0003-model-output-is-not-executable-shell.md) for the trust boundary around model output.

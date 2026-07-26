@@ -1,6 +1,6 @@
 {
   "name": "@monox/cloudapter-kubernetes",
-  "version": "0.2.0-alpha.1",
+  "version": "0.2.0",
   "description": "Render and safely hand Kubernetes manifests to an injected apply transport.",
   "private": true,
   "type": "module",

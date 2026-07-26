@@ -98,6 +98,8 @@ test('generates v2 package-owned deployment contracts and root-owned target conf
     const kubernetesGate = await readFile(join(destination, 'infra/kubernetes/workloads.yaml'), 'utf8');
     assert.match(kubernetesGate, /intentionally contains no runnable Kubernetes resources/);
     assert.match(kubernetesGate, /immutable image reference from the build receipt must be resolved first/);
+    assert.match(kubernetesGate, /does not install a public monox delivery binary/);
+    assert.doesNotMatch(kubernetesGate, /Use `monox (?:plan|render)`/);
     assert.doesNotMatch(kubernetesGate, /^kind:\s+/m);
     assert.doesNotMatch(kubernetesGate, /^\s*image:\s+/m);
   });
@@ -365,6 +367,7 @@ test('produces byte-identical tracked content and a complete deterministic lock'
     const firstLock = JSON.parse(await readFile(join(parent, 'first', 'monox.lock'), 'utf8'));
     const secondLock = JSON.parse(await readFile(join(parent, 'second', 'monox.lock'), 'utf8'));
     assert.deepEqual(firstLock, secondLock);
+    assert.equal(firstLock.generator.version, '0.2.0');
     assert.deepEqual(
       firstLock.selection.addons.map(({ id }) => id),
       ['postgresql', 'redis', 'temporal']
@@ -602,7 +605,7 @@ test('rejects development-only add-ons in production and invalid delivery combin
   for (const delivery of ['docker:generic-ssh', 'docker:aws-ec2', 'docker:gcp-compute']) {
     await assert.rejects(
       generateProject({ name: 'remote-docker-app', delivery, dryRun: true }),
-      /cataloged for 0\.2\.0-alpha\.2 but is not executable in 0\.2\.0-alpha\.1/
+      /cataloged but unavailable in create-monox 0\.2\.0/
     );
   }
   await assert.rejects(

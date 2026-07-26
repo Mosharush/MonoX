@@ -1,46 +1,32 @@
 # MonoX 0.2 delivery roadmap
 
-This roadmap distinguishes source implementation from release evidence. A feature is public only after its
-release slice passes the named acceptance checks. Code present on a development branch is not a production
-support claim.
+This roadmap separates the stable generator and contract surface from remote infrastructure acceptance. Code
+in the repository is not a production support claim until the capability status names its evidence.
 
 ## Current state
 
-`0.2.0-alpha.1` is implemented as a source prerelease and is still behind the release gate. The repository
-must pass the complete check suite, synthetic migration goldens, representative polyglot acceptance, the
-built-in local Cloudapter lifecycle smoke and the first hosted 24-recipe matrix before a prerelease tag or npm
-publish.
+`create-monox@0.2.0` is the stable release for deterministic project generation and generated offline
+contracts. The supported package boundary includes:
 
-Current source includes:
+- package-owned deployment v2 contracts and root target configuration;
+- 24 bundled JavaScript, TypeScript, Python, PHP and Go workspace recipes;
+- deterministic selection and `monox.lock` integrity;
+- Yarn, npm and pnpm project generation;
+- local service, CI, container and Kubernetes artifact generation.
 
-- package-owned deployment schema v2 and generated TypeScript declarations;
-- RFC 7396 environment and variant resolution with unique target binding;
-- deterministic bundled recipes and `monox.lock` integrity;
-- the complete built-in recipe and add-on catalog definitions;
-- platform runtime packages and the versioned Cloudapter interface;
-- a built-in local Docker Compose executor plus PM2, SSH, Coolify and Kubernetes adapters behind injected
-  remote transports;
-- AWS and Google Cloud plan-only provider intent;
-- Kubernetes workload rendering for typed scaling and GPU intent;
-- a read-only legacy migration inventory with synthetic redaction.
+Release evidence includes the complete repository gate, representative polyglot acceptance, a hosted 24-recipe
+matrix and a clean-cache generated-project consumer with signed npm provenance.
 
-The source now includes a scheduled 24-recipe install, test, build and runtime acceptance workflow. A local
-acceptance run covers every recipe, but its first hosted run and cross-platform evidence remain release gates.
+The public source tree also contains schema and TypeScript declaration parity, RFC 7396 resolution, migration
+and production identity gates, the `@monox/cli`, Cloudapter implementations, a built-in local Docker Compose
+executor and synthetic migration goldens. Those packages remain npm-private in 0.2.0. Generated projects do
+not receive a public `monox` binary, so source-tool evidence is not described as package-consumer evidence.
 
-The following are not complete release evidence:
+Stable does not promote every source package to live infrastructure support. PM2, SSH, Coolify and Kubernetes
+state changes remain guarded behind injected transports and their live acceptance is pending. AWS and Google
+Cloud providers emit plan-only intent. Kubernetes add-on records marked `unverified` remain non-executable.
 
-- private-reference credential rotation and any approved history cleanup;
-- hosted full-template matrix evidence across the maintained toolchain versions;
-- disposable PM2 and SSH host tests;
-- authenticated Coolify staging tests;
-- Pulumi sandbox apply and destroy on AWS and Google Cloud;
-- real GKE or EKS identity, queue, RPS and GPU acceptance;
-- a production canary and exercised rollback;
-- a reviewed public production case study.
-
-## Release slices
-
-### Security gate
+## Security boundary
 
 - Rotate any tracked provider credentials in reference repositories before extraction or case-study work.
 - Replace long-lived credentials with OIDC, workload identity or external secret references.
@@ -49,102 +35,75 @@ The following are not complete release evidence:
 - Run full-history scans after approved rewrites and purge cached artifacts where the host allows it.
 - Keep product code, private identifiers and live manifests out of public fixtures.
 
-The public MonoX repository already has read-only CI, full-history secret scanning, dependency audit, source
-SBOM generation and pinned release actions. These controls do not replace the private-reference rotation gate.
+The public MonoX repository has read-only CI, full-history secret scanning, dependency audit, source SBOM
+generation and pinned release actions. These controls do not replace the private-reference credential gate.
 
-### `0.2.0-alpha.1`
+## 0.2.x follow-up tracks
 
-Target deliverables:
+### Local catalog acceptance
 
-- schema v2, config resolver and migration report;
-- deterministic generator and agent kit;
-- JavaScript, TypeScript and Python recipe acceptance;
-- local Compose validation and health checks;
-- core runtime packages and Cloudapter plan protocol.
+Target evidence:
 
-Exit criteria:
+- run every selected Compose add-on to health in isolated environments;
+- verify dependency closure, persistent-data ownership and owned-only destroy;
+- keep LocalStack and Mailpit rejected in production;
+- keep stateful Kubernetes add-ons opt-in and external by default in production.
 
-- schema, generated types and runtime validator remain in parity;
-- unknown fields, unsafe overlays and ambiguous target bindings fail;
-- synthetic service, queue, long worker, GPU, static, suspended and variant migrations match goldens;
-- representative Node and Python projects install, build, test, start and pass health checks;
-- Yarn, npm and pnpm consumer smoke tests remain green;
-- plans and receipts are redacted, immutable and stale-plan aware;
-- generated local Docker delivery passes doctor, deploy, readiness, status and owned-only destroy on an
-  isolated runner;
-- all repository checks pass on supported Node majors.
+### Remote delivery acceptance
 
-### `0.2.0-alpha.2`
+Target evidence:
 
-Target deliverables:
+- disposable-host PM2 promotion, readiness and rollback;
+- generic SSH host verification and connection tests;
+- authenticated Coolify create, deploy, status and rollback with scoped tokens;
+- existing Kubernetes apply, health, status and rollback through the v2 adapter;
+- composite Docker delivery over SSH, AWS SSM and Google Cloud IAP.
 
-- maintained PHP and Go recipe acceptance;
-- complete local add-on health matrix;
-- PM2, generic SSH, AWS SSM and Google Cloud IAP execution transports;
-- existing Coolify staging support;
-- Pulumi-managed VM and provisioned Coolify modules.
+Until those checks pass, these adapters require an explicitly injected transport and remain
+acceptance-pending.
 
-Exit criteria:
+### Cloud and managed Kubernetes
 
-- PHP and Go representative projects install, build, test and start where applicable;
-- disposable-host promotion includes a readiness gate and verified rollback;
-- SSH rejects unknown hosts and private-key material in configuration;
-- Coolify tests prove scoped `read`, `write` and `deploy` authorization without `root`;
-- Pulumi mocks and sandbox VM create, status and destroy pass with TTL and budget guards.
+Target evidence:
 
-The current alpha.1 adapter packages provide implementation groundwork. They do not satisfy these live exit
-criteria by themselves.
+- Pulumi Automation API preview, apply, status and destroy in budget-guarded AWS and Google Cloud sandboxes;
+- OIDC and Workload Identity Federation without static provider credentials;
+- managed EKS and GKE identity, queue, RPS and scale-to-zero acceptance;
+- GPU placement, model-cache storage and operator compatibility on supported nodes;
+- verified Helm OCI chart coordinates, versions and digests;
+- OpenTelemetry Collector integration and managed alert acceptance.
 
-### `0.2.0-alpha.3`
+AWS and Google Cloud remain plan-only until this track passes. Generated plans must never imply that external
+state changed.
 
-Target deliverables:
+### Production adoption and public case study
 
-- existing Kubernetes plus Pulumi-managed EKS and GKE Standard;
-- verified Helm OCI add-on catalog with digest pins;
-- static delivery for AWS and Google Cloud;
-- CPU, memory, RPS, queue and external event scaling;
-- GPU scheduling and model-cache support;
-- vendor-neutral telemetry through OpenTelemetry.
+Target evidence:
 
-Exit criteria:
-
-- kind or K3d policy and runtime tests pass with Helm, KEDA, Prometheus and RabbitMQ;
-- scheduled AWS and Google Cloud sandboxes prove apply, status, rollback and destroy;
-- workload identity, scale-to-zero and RPS or queue scaling pass on a real managed cluster;
-- a supported GPU workload schedules with the expected taints, tolerations, storage and metrics;
-- chart and image references are versioned and digest-pinned;
-- production add-ons default to managed or external stateful services.
-
-### `0.2.0-rc.1`
-
-Target deliverables:
-
-- read-only migration report for the private production reference;
-- sanitized dual-render diffs;
+- a read-only migration report from the private production reference;
+- sanitized and reviewed dual-render differences;
 - dev and staging adoption;
 - one low-risk production canary;
-- independent new-project pilot and documentation freeze.
+- an exercised rollback to the previous revision;
+- an independent new-project pilot with consented measurements.
 
-Exit criteria:
+The private reference, its implementation details and its name remain outside public case-study claims until
+credential cleanup, canary and rollback evidence are complete.
 
-- every migrated workload has a reviewed target and no inline secret;
-- current and MonoX-rendered outputs have reviewed, explained differences;
-- one canary runs through MonoX and rolls back to the previous revision successfully;
-- the pilot records first run, CI, first feature and first deploy without coaching during its initial period;
-- only consented, measured outcomes appear in public material.
+## Release requirements
 
-### `0.2.0`
+Every `0.2.x` package release requires:
 
-Stable release requires:
+- immutable installation, formatting, lint, tests, builds and infrastructure validation;
+- schema, generated declarations and runtime validator parity;
+- synthetic migration goldens and representative generated-project acceptance;
+- full public-history secret scanning, high-severity dependency audit and source SBOM generation;
+- reviewed package contents, an exact protected-main tag and OIDC trusted publishing with provenance;
+- clean-cache registry consumption and the expected npm dist-tag;
+- unsupported selections to fail before destination writes or external changes.
 
-- all security-gate records complete;
-- production canary and rollback evidence retained;
-- package provenance and public registry consumer smoke verified;
-- `Mosharush/MonoX`, `create-monox`, `monox.dev`, GitHub profile, portfolio and LinkedIn use the same verified
-  wording;
-- no duplicate active public MonoX repository;
-- unsupported capabilities fail before file writes or external changes;
-- generated projects, plans, logs, fixtures and public history contain no credentials or private identifiers.
+A production capability or case-study claim additionally requires its live evidence above. Package stability
+does not waive that rule.
 
 ## Non-goals during 0.2
 
@@ -157,4 +116,4 @@ Stable release requires:
 - treating model output as executable shell.
 
 See [capability-status.md](capability-status.md) for evidence at the package level and
-[security-gate.md](security-gate.md) for the history-cleanup prerequisites.
+[security-gate.md](security-gate.md) for history-cleanup prerequisites.

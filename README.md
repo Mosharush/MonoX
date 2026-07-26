@@ -16,8 +16,10 @@ Every deployable package owns a versioned `package.json.deployment` block. The r
 project boundaries, workload profiles, environments, targets and add-ons. There is no second application list
 to keep in sync.
 
-> Status: `0.2.0-alpha.1` is a source prerelease. The protected npm workflow publishes prereleases under the
-> `next` dist-tag only after its release gate passes. The stable npm line remains available through `latest`.
+> `create-monox` 0.2.0 is the stable generator release and is published through the `latest` dist-tag. Stable
+> support covers deterministic project generation and the source-tested offline contracts described below.
+> Remote infrastructure execution remains guarded, acceptance-pending or plan-only as marked in the
+> [capability status](docs/capability-status.md).
 
 [Project site](https://monox.dev) | [Architecture](docs/architecture.md) |
 [Deployment contract](docs/deployment.md) | [create-monox on npm](https://www.npmjs.com/package/create-monox)
@@ -25,10 +27,10 @@ to keep in sync.
 
 ## Generate a product
 
-After the alpha is published under `next`:
+Create a project from the stable channel:
 
 ```bash
-npm create monox@next -- my-product \
+npm create monox@latest -- my-product \
   --workspace api=node-fastify-api \
   --workspace web=react-vite-web \
   --workspace jobs=node-worker \
@@ -120,21 +122,25 @@ immutable. Every resolved base workload and variant must match exactly one targe
 
 See [Deployment contract](docs/deployment.md) for the complete resolution order and safety rules.
 
-## CLI
+## Source-tree delivery CLI
+
+The delivery CLI below is tested from this repository with `yarn monox`. It is not installed by
+`create-monox@0.2.0`; generated projects receive the deployment contracts and fail-closed placeholders only.
+`@monox/cli` remains npm-private until its package scope and independent consumer contract are ready.
 
 ```text
-monox validate
-monox config explain <package> --env <environment> [--target <target>]
-monox doctor --env <environment> [--target <target>]
-monox plan --env <environment> --all|--select <ids>|--affected
-monox render --env <environment> --target <target> --all|--select <ids>|--affected --output-dir <dir>
-monox deploy --env <environment> --all|--select <ids>|--affected
-monox apply --plan <file>
-monox status --env <environment> --target <target>
-monox rollback --env <environment> --target <target> --revision <revision>
-monox destroy --env <environment> --target <target> --confirm <project/environment/target>
-monox cloud plan|setup|status|destroy --env <environment> --target <target>
-monox migrate deployment --from monox-v1|legacy-production --input <file>
+yarn monox validate
+yarn monox config explain <package> --env <environment> [--target <target>]
+yarn monox doctor --env <environment> [--target <target>]
+yarn monox plan --env <environment> --all|--select <ids>|--affected
+yarn monox render --env <environment> --target <target> --all|--select <ids>|--affected --output-dir <dir>
+yarn monox deploy --env <environment> --all|--select <ids>|--affected
+yarn monox apply --plan <file>
+yarn monox status --env <environment> --target <target>
+yarn monox rollback --env <environment> --target <target> --revision <revision>
+yarn monox destroy --env <environment> --target <target> --confirm <project/environment/target>
+yarn monox cloud plan|setup|status|destroy --env <environment> --target <target>
+yarn monox migrate deployment --from monox-v1|legacy-production --input <file>
 ```
 
 An environment and one workload selector are mandatory for workload state changes. Production state changes
@@ -143,7 +149,7 @@ require `CI=true`, a protected environment and an identity reference. Destroy re
 
 ## Maintained catalog
 
-The alpha catalog contains 24 workspace recipes:
+The stable generator contains 24 bundled workspace recipes:
 
 - JavaScript and TypeScript: Node HTTP, Fastify, Express, Nest, Hono, workers, cron, React, Vue, Next, Nuxt,
   SvelteKit, Angular and TypeScript libraries.
@@ -154,8 +160,8 @@ The alpha catalog contains 24 workspace recipes:
 Java, .NET and Rust remain extension recipes until they have maintained install, test, build and runtime CI.
 Yarn, pnpm and npm are supported for JavaScript workspaces.
 
-A scheduled 24-recipe matrix installs, tests, builds and starts or probes every built-in workspace. The first
-hosted matrix run remains part of the prerelease evidence gate.
+A scheduled 24-recipe matrix installs, tests, builds and starts or probes every built-in workspace. Release
+candidates rerun that hosted matrix against the exact candidate commit.
 
 The 28 add-on recipes cover data, messaging, AI, search, storage, identity, development, observability and
 Kubernetes platform components. LocalStack and Mailpit are rejected for production. Stateful Kubernetes
@@ -171,7 +177,7 @@ methods are versioned through `Cloudapter`: `doctor`, `validate`, `plan`, `rende
 Local Docker Compose has a built-in executor that runs only allowlisted `docker compose` argument arrays with
 `shell: false`, bounded readiness checks and explicit owned services. PM2, SSH, Coolify and Kubernetes retain
 explicitly injected transports, so the CLI does not infer a host, credential or cluster context. AWS and GCP
-are plan-only in this alpha; provider executors and live sandbox apply remain release gates.
+are plan-only in 0.2.0; provider executors and live sandbox apply are not part of the stable support contract.
 
 ## Work on MonoX
 
@@ -195,8 +201,8 @@ docker compose --env-file infra/local/.env -f infra/local/docker-compose.yml --p
 `yarn check` covers formatting, repository boundaries, deployment resolution, tests, builds and infrastructure
 validation. MonoX repository CI repeats the gate on Node.js 22, 24 and 26, tests Yarn, npm and pnpm consumers,
 audits dependencies, scans the full history and creates an SPDX JSON source SBOM. Generated project CI is
-limited to immutable install, lock verification, tests and builds. Alpha acceptance also runs a generated
-local Docker target through doctor, deploy, an explicit health probe, status and owned-only destroy.
+limited to immutable install, lock verification, tests and builds. The 0.2 acceptance workflow also runs a
+generated local Docker target through doctor, deploy, an explicit health probe, status and owned-only destroy.
 
 ## Clean-room boundary
 

@@ -1,6 +1,6 @@
 {
   "name": "monox",
-  "version": "0.2.0-alpha.1",
+  "version": "0.2.0",
   "private": true,
   "description": "Agent-ready JavaScript monorepo starter and deployment toolkit with explicit architecture boundaries.",
   "license": "MIT",

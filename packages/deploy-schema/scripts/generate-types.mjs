@@ -285,7 +285,7 @@ export type DeploymentVariantPatchV2 = DeploymentObjectPatchV2 & {
   ${schema.required.map(literal).join(' | ')}
 >;
 
-// Compatibility aliases retained for the 0.2 alpha public surface.
+// Compatibility aliases retained for the 0.2 public surface.
 export type DeploymentBuild = DeploymentBuildSpec;
 export type DeploymentRuntime = DeploymentRuntimeSpec;
 export type DeploymentNetwork = DeploymentNetworkSpec;

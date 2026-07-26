@@ -1,6 +1,6 @@
 {
   "name": "@monox/provider-gcp",
-  "version": "0.2.0-alpha.1",
+  "version": "0.2.0",
   "description": "Plan-only Google Cloud infrastructure intents with Workload Identity Federation references.",
   "private": true,
   "type": "module",

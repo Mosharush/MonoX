@@ -1,6 +1,6 @@
 {
   "name": "@monox/cloudapter-coolify",
-  "version": "0.2.0-alpha.1",
+  "version": "0.2.0",
   "description": "Reference-only Coolify service request planning for /api/v1/services.",
   "private": true,
   "type": "module",

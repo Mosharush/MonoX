@@ -110,7 +110,7 @@ export interface PackageManagerInvocation {
   readonly env?: Readonly<Record<string, string>>;
 }
 
-export declare const GENERATOR_VERSION: '0.2.0-alpha.1';
+export declare const GENERATOR_VERSION: '0.2.0';
 export declare const PACKAGE_MANAGERS: readonly PackageManager[];
 export declare const INFRA_OPTIONS: readonly InfrastructureOption[];
 export declare const ENVIRONMENTS: readonly MonoXEnvironment[];

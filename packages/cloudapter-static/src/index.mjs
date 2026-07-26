@@ -82,7 +82,7 @@ function actionFor(workload, context) {
 export class StaticCloudapter {
   constructor() {
     this.id = 'static';
-    this.version = '0.2.0-alpha.1';
+    this.version = '0.2.0';
     this.apiVersion = '1';
     this.capabilities = [
       'apply',

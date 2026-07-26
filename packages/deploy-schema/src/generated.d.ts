@@ -309,7 +309,7 @@ export type DeploymentRequiredFields = Pick<
   'schemaVersion' | 'enabled' | 'id' | 'kind' | 'build' | 'runtime'
 >;
 
-// Compatibility aliases retained for the 0.2 alpha public surface.
+// Compatibility aliases retained for the 0.2 public surface.
 export type DeploymentBuild = DeploymentBuildSpec;
 export type DeploymentRuntime = DeploymentRuntimeSpec;
 export type DeploymentNetwork = DeploymentNetworkSpec;

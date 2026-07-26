@@ -10,7 +10,7 @@
     "dockerfile": "infra/docker/Dockerfile.node",
     "image": {
       "repository": "registry.invalid/example/api",
-      "tag": "0.2.0-alpha.1"
+      "tag": "0.2.0"
     }
   },
   "runtime": {

@@ -7,7 +7,7 @@ import {
 } from '@monox/cloudapter-core';
 import { buildKubernetesResources, renderKubernetesManifests } from '@monox/kube-renderer';
 
-const VERSION = '0.2.0-alpha.1';
+const VERSION = '0.2.0';
 
 function workloadId(workload) {
   return workload.deployment?.id ?? workload.name ?? workload.id;

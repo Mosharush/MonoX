@@ -19,7 +19,7 @@ test('serves health and synthetic API responses', async () => {
     assert.equal(health.status, 200);
     assert.deepEqual(await health.json(), {
       name: '@monox/api',
-      version: '0.2.0-alpha.1',
+      version: '0.2.0',
       ready: true,
       live: true,
       state: 'running',

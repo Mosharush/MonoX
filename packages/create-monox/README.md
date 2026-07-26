@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Mosharush/MonoX/main/assets/brand/monox-readme-header.png" alt="MonoX. Reusable monorepo boundaries and delivery paths for AI agents." width="1280">
+  <img src="https://raw.githubusercontent.com/Mosharush/MonoX/create-monox-v0.2.0/assets/brand/monox-readme-header.png" alt="MonoX. Reusable monorepo boundaries and delivery paths for AI agents." width="1280">
 </p>
 
 # create-monox
@@ -13,7 +13,7 @@ The package has no runtime dependencies and supports Node.js 22.22.2+, 24.15.0+ 
 ## Quick start
 
 ```sh
-npm create monox@next -- my-product \
+npm create monox@latest -- my-product \
   --workspace api=node-fastify-api \
   --workspace web=react-vite-web \
   --addon redis \
@@ -71,9 +71,13 @@ fail before the destination is touched. Production generation is deliberately fa
 CI/OIDC identity and immutable image or artifact digests are bound by a delivery plan. Local delivery,
 unverified chart coordinates, `localstack` and `mailpit` are never accepted as production inputs.
 
-Available delivery selections are listed separately from planned selections in `--help`. Remote Docker over
-SSH, EC2 or Google Compute is cataloged for `0.2.0-alpha.2` and is rejected before any destination write in
-this alpha.
+Available delivery selections are listed separately from guarded selections in `--help`. Remote Docker over
+SSH, EC2 or Google Compute is cataloged but unavailable in 0.2.0 and is rejected before any destination write.
+
+`create-monox@0.2.0` writes deployment contracts and fail-closed delivery placeholders, but it does not
+install a public `monox` delivery binary. The `@monox/cli` implementation remains public source and
+npm-private while its package scope and independent consumer contract are prepared. Commands in the repository
+documentation that start with `yarn monox` are source-checkout tools, not generated-project scripts.
 
 ## Maintained workspace recipes
 
@@ -170,10 +174,10 @@ const workspace: WorkspaceRecipe = WORKSPACE_RECIPES['node-fastify-api'];
 const addon: AddonRecipe = ADDON_RECIPES.redis;
 ```
 
-Execution remains bundled-only in `0.2.0-alpha.1`. There is no external recipe loader in this release. Future
-external references must use a namespaced ID such as `@acme/java-api`, declare an API version and recipe
-version, and provide a verified `sha256-...` integrity value before MonoX can accept them. Passing an external
-recipe ID to the current generator fails validation.
+Execution remains bundled-only in `0.2.0`. There is no external recipe loader in this release. Future external
+references must use a namespaced ID such as `@acme/java-api`, declare an API version and recipe version, and
+provide a verified `sha256-...` integrity value before MonoX can accept them. Passing an external recipe ID to
+the current generator fails validation.
 
 ## Development
 

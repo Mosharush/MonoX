@@ -68,7 +68,7 @@ test('help separates executable and planned delivery targets', async () => {
   const { stdout, stderr } = await execFileAsync(process.execPath, [cliPath, '--help']);
   assert.equal(stderr, '');
   assert.match(stdout, /Available delivery targets:[\s\S]*docker:local/);
-  assert.match(stdout, /Planned for 0\.2\.0-alpha\.2[\s\S]*docker:generic-ssh/);
+  assert.match(stdout, /Cataloged but unavailable in 0\.2\.0[\s\S]*docker:generic-ssh/);
 });
 
 test('rejects unknown options, malformed selections and invalid enum values', () => {
@@ -247,7 +247,7 @@ test('CLI version works through a package-manager symlink', async () => {
     await symlink(cliPath, executable);
     const { stdout, stderr } = await execFileAsync(executable, ['--version']);
     assert.equal(stderr, '');
-    assert.equal(stdout.trim(), '0.2.0-alpha.1');
+    assert.equal(stdout.trim(), '0.2.0');
   } finally {
     await rm(parent, { recursive: true, force: true });
   }

@@ -42,7 +42,7 @@ function confirmation(context) {
 export class SshCloudapter {
   constructor() {
     this.id = 'ssh';
-    this.version = '0.2.0-alpha.1';
+    this.version = '0.2.0';
     this.apiVersion = '1';
     this.capabilities = ['apply', 'host-verification', 'render', 'rollback', 'ssh', 'status', 'upload'];
   }

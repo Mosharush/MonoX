@@ -6,6 +6,7 @@ only what appears here with passing release evidence.
 ## Status vocabulary
 
 - **Verified in source**: implemented and covered by repository tests or deterministic validation.
+- **Verified in release**: source evidence plus the named hosted workflow or published-consumer check passed.
 - **Implemented, acceptance pending**: code exists, but the live or cross-platform acceptance named here has
   not passed.
 - **Plan-only**: produces validated intent and cannot change external state.
@@ -13,40 +14,40 @@ only what appears here with passing release evidence.
 
 ## Contract and CLI
 
-| Capability                                                       | Status                          | Current evidence                                                | Remaining evidence                                               |
-| ---------------------------------------------------------------- | ------------------------------- | --------------------------------------------------------------- | ---------------------------------------------------------------- |
-| `package.json.deployment` v2                                     | Verified in source              | JSON Schema, generated declarations and runtime validator tests | Prerelease CI on the tagged source                               |
-| Root config v2 without `applications[]`                          | Verified in source              | Strict validator and repository validation                      | Prerelease CI on the tagged source                               |
-| RFC 7396 overlays                                                | Verified in source              | Merge, deletion and immutable-field tests                       | More complex production migration cases                          |
-| Automatic deployment discovery                                   | Verified in source              | Workspace fixture tests                                         | Large-repository performance measurement                         |
-| Exactly one target per resolved workload                         | Verified in source              | Zero-match and multi-match rejection tests                      | Production inventory review                                      |
-| `validate`, `config explain`, `doctor`, `plan`, `render`         | Verified in source              | CLI unit and fixture tests                                      | Published package consumer test when CLI publication is approved |
-| `deploy`, `apply`, `status`, `rollback`, `destroy` orchestration | Implemented, acceptance pending | Built-in local executor plus injected-adapter tests             | Live remote adapter-specific acceptance                          |
-| Stale-plan rejection                                             | Verified in source              | Source, target-state, adapter and plan-content tests            | Concurrent external-state test                                   |
-| Production identity gate                                         | Verified in source              | Protected environment, `CI=true` and identity-reference tests   | Hosted protected-environment run                                 |
+| Capability                                                       | Status                          | Current evidence                                              | Remaining evidence                          |
+| ---------------------------------------------------------------- | ------------------------------- | ------------------------------------------------------------- | ------------------------------------------- |
+| `package.json.deployment` v2                                     | Verified in release             | JSON Schema, declarations, runtime validator and hosted CI    | More production migration cases             |
+| Root config v2 without `applications[]`                          | Verified in release             | Strict validator, repository validation and hosted CI         | More production inventory cases             |
+| RFC 7396 overlays                                                | Verified in source              | Merge, deletion and immutable-field tests                     | More complex production migration cases     |
+| Automatic deployment discovery                                   | Verified in source              | Workspace fixture tests                                       | Large-repository performance measurement    |
+| Exactly one target per resolved workload                         | Verified in source              | Zero-match and multi-match rejection tests                    | Production inventory review                 |
+| `validate`, `config explain`, `doctor`, `plan`, `render`         | Verified in source              | CLI unit and fixture tests                                    | Public CLI package and clean consumer smoke |
+| `deploy`, `apply`, `status`, `rollback`, `destroy` orchestration | Implemented, acceptance pending | Built-in local executor plus injected-adapter tests           | Live remote adapter-specific acceptance     |
+| Stale-plan rejection                                             | Verified in source              | Source, target-state, adapter and plan-content tests          | Concurrent external-state test              |
+| Production identity gate                                         | Verified in source              | Protected environment, `CI=true` and identity-reference tests | Hosted protected-environment run            |
 
 ## Generator and catalog
 
-| Capability                        | Status                                            | Current evidence                                                     | Remaining evidence                                                  |
-| --------------------------------- | ------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| Bundled deterministic recipes     | Verified in source                                | Byte-identical generation and selection-integrity tests              | Published `create-monox@next` consumer test                         |
-| Yarn, npm and pnpm                | Verified for representative JavaScript generation | Existing consumer smoke workflows                                    | Representative polyglot run on each package manager                 |
-| JavaScript and TypeScript catalog | Implemented, acceptance pending                   | All 14 recipes pass local install, test and build acceptance         | First hosted 24-recipe matrix and complete runtime probe run        |
-| Python catalog with `uv`          | Implemented, acceptance pending                   | All 5 recipes pass local install, test, build and runtime acceptance | First hosted 24-recipe matrix run                                   |
-| PHP catalog with Composer         | Implemented, acceptance pending                   | Both recipes pass containerized install, strict validation and test  | First hosted 24-recipe matrix run across supported PHP releases     |
-| Go catalog                        | Implemented, acceptance pending                   | All 3 recipes pass digest-pinned container build and runtime checks  | First hosted 24-recipe matrix run across supported Go releases      |
-| Java, .NET and Rust               | Planned extension recipes                         | Extension direction only                                             | Versioned external recipe loader and maintained CI                  |
-| Local Compose add-ons             | Implemented, acceptance pending                   | 21 digest-pinned services, dependency closure and config validation  | `docker compose up` health matrix for every add-on                  |
-| Kubernetes add-ons                | Plan-only metadata                                | Generated records are marked `unverified`                            | Verified OCI chart coordinates, versions, digests and runtime tests |
+| Capability                        | Status                                            | Current evidence                                                    | Remaining evidence                                                  |
+| --------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| Bundled deterministic recipes     | Verified in release                               | Byte-identical generation, integrity tests and registry consumer    | External recipe loading remains out of scope                        |
+| Yarn, npm and pnpm                | Verified for representative JavaScript generation | Hosted consumer smoke workflows                                     | Representative polyglot run on each package manager                 |
+| JavaScript and TypeScript catalog | Verified in release                               | All 14 recipes pass hosted install, test, build and runtime checks  | Scheduled compatibility runs across supported Node releases         |
+| Python catalog with `uv`          | Verified in release                               | All 5 recipes pass hosted install, test, build and runtime checks   | Scheduled compatibility runs across supported Python releases       |
+| PHP catalog with Composer         | Verified in release                               | Both recipes pass hosted install, strict validation and runtime     | Scheduled compatibility runs across supported PHP releases          |
+| Go catalog                        | Verified in release                               | All 3 recipes pass hosted build, test and runtime checks            | Scheduled compatibility runs across supported Go releases           |
+| Java, .NET and Rust               | Planned extension recipes                         | Extension direction only                                            | Versioned external recipe loader and maintained CI                  |
+| Local Compose add-ons             | Implemented, acceptance pending                   | 21 digest-pinned services, dependency closure and config validation | `docker compose up` health matrix for every add-on                  |
+| Kubernetes add-ons                | Plan-only metadata                                | Generated records are marked `unverified`                           | Verified OCI chart coordinates, versions, digests and runtime tests |
 
 ## Delivery paths
 
 | Delivery path                           | Status                          | Current evidence                                                    | Remaining evidence                                        |
 | --------------------------------------- | ------------------------------- | ------------------------------------------------------------------- | --------------------------------------------------------- |
-| Local Docker Compose                    | Implemented, acceptance pending | Built-in allowlisted executor, owned rollback and config tests      | Complete generated add-on runtime matrix                  |
+| Local Docker Compose                    | Verified in release             | Hosted doctor, deploy, health, status and owned-destroy smoke       | Complete generated add-on runtime matrix                  |
 | PM2 on an existing host                 | Implemented, acceptance pending | Ecosystem rendering, health gate and rollback-hook tests            | Disposable-host promotion and rollback                    |
 | Generic SSH transport                   | Implemented, acceptance pending | Reference validation, argv-only actions and host-verification tests | Disposable-host connection test                           |
-| Docker on SSH, EC2 or Compute           | Planned for `0.2.0-alpha.2`     | Catalog entries fail before generator writes                        | Composite build, transport, health and rollback adapter   |
+| Docker on SSH, EC2 or Compute           | Cataloged, unavailable in 0.2.0 | Catalog entries fail before generator writes                        | Composite build, transport, health and rollback adapter   |
 | Existing Coolify                        | Implemented, acceptance pending | Request rendering, redaction and scope validation tests             | Authenticated staging create, deploy, status and rollback |
 | Existing Kubernetes                     | Implemented, acceptance pending | Offline v2 rendering, policy goldens and injected transport tests   | Cluster apply and rollback using the v2 adapter           |
 | AWS EC2, EKS, Coolify and static        | Plan-only                       | Deterministic Pulumi intent and static-key rejection                | Automation API executor plus sandbox lifecycle            |
@@ -77,15 +78,15 @@ The private production reference currently has 42 tracked deployment blocks. No 
 part of this repository. Production implementation, canary and rollback are still pending, so public material
 must not describe the reference as a completed MonoX 0.2 case study.
 
-## Approved alpha wording
+## Approved 0.2 wording
 
 Use concrete statements such as:
 
 > MonoX generates a monorepo with selected apps and libraries, package-owned deployment contracts, local
 > services, CI, container definitions and a validated delivery target.
 
-> MonoX gives developers, CI and coding agents the same workspace and deployment map. The 0.2 alpha can
-> validate, explain, plan and render that map before a guarded adapter is allowed to change external state.
+> MonoX gives developers, CI and coding agents the same workspace and deployment map. MonoX 0.2 can validate,
+> explain, plan and render that map before a guarded adapter is allowed to change external state.
 
 Do not claim:
 

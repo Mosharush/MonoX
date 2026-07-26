@@ -289,7 +289,7 @@ export function createReceipt({
 }
 
 export class NoopCloudapter {
-  constructor({ id = 'noop', version = '0.2.0-alpha.1', reason = 'No external adapter is configured' } = {}) {
+  constructor({ id = 'noop', version = '0.2.0', reason = 'No external adapter is configured' } = {}) {
     this.id = id;
     this.version = version;
     this.apiVersion = CLOUDAPTER_API_VERSION;

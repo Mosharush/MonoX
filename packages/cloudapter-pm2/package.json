@@ -1,6 +1,6 @@
 {
   "name": "@monox/cloudapter-pm2",
-  "version": "0.2.0-alpha.1",
+  "version": "0.2.0",
   "description": "Health-gated PM2 release planning for resolved MonoX workloads.",
   "private": true,
   "type": "module",

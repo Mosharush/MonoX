@@ -19,8 +19,8 @@
       content="Create workspaces, boundaries, local services, CI, containers and delivery contracts together."
     />
     <meta property="og:url" content="https://monox.dev/" />
-    <meta property="og:image" content="https://monox.dev/og-image.png" />
-    <meta property="og:image:secure_url" content="https://monox.dev/og-image.png" />
+    <meta property="og:image" content="https://monox.dev/og-image.png?v=0.2.0" />
+    <meta property="og:image:secure_url" content="https://monox.dev/og-image.png?v=0.2.0" />
     <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
@@ -31,7 +31,7 @@
       name="twitter:description"
       content="Create workspaces, boundaries, local services, CI, containers and delivery contracts together."
     />
-    <meta name="twitter:image" content="https://monox.dev/og-image.png" />
+    <meta name="twitter:image" content="https://monox.dev/og-image.png?v=0.2.0" />
     <link rel="canonical" href="https://monox.dev/" />
     <link rel="alternate" hreflang="en" href="https://monox.dev/?lang=en" />
     <link rel="alternate" hreflang="he" href="https://monox.dev/?lang=he" />
@@ -50,7 +50,7 @@
         "url": "https://monox.dev/",
         "codeRepository": "https://github.com/Mosharush/MonoX",
         "description": "An open-source monorepo generator and delivery toolkit with package-level deployment contracts.",
-        "version": "0.2.0-alpha.1",
+        "version": "0.2.0",
         "programmingLanguage": ["JavaScript", "TypeScript", "Python", "PHP", "Go"],
         "license": "https://spdx.org/licenses/MIT.html",
         "isAccessibleForFree": true,
@@ -71,7 +71,7 @@
         <img src="/brand/monox-lockup-horizontal-reverse.svg" width="125" height="40" alt="MonoX" />
       </a>
       <nav class="header-actions" aria-label="Primary navigation">
-        <span class="release-status" dir="ltr">0.2 alpha</span>
+        <span class="release-status" dir="ltr">v0.2.0</span>
         <a href="#proof">Proof</a>
         <a href="https://github.com/Mosharush/MonoX">GitHub</a>
         <a href="https://www.npmjs.com/package/create-monox">npm</a>
@@ -90,7 +90,7 @@
             the same package-level contract.
           </p>
           <div class="actions">
-            <a class="primary-action" href="#command">Preview the 0.2 alpha</a>
+            <a class="primary-action" href="#command">Create with 0.2</a>
             <a class="text-action" href="https://github.com/Mosharush/MonoX">Read the source</a>
           </div>
         </div>
@@ -100,16 +100,16 @@
             <strong id="command-title">Create a product</strong>
             <span>deterministic recipes</span>
           </div>
-          <p>The current 0.2 build is <code>0.2.0-alpha.1</code>, available under <code>next</code>.</p>
-          <pre tabindex="0"><code><strong>npm create monox@next -- my-product \</strong>
+          <p>The current stable release is <code>0.2.0</code>.</p>
+          <pre tabindex="0"><code><strong>npm create monox@latest -- my-product \</strong>
 <span>  --workspace api=node-fastify-api \</span>
 <span>  --workspace web=react-vite-web \</span>
 <span>  --workspace jobs=node-worker \</span>
 <span>  --addon redis --addon rabbitmq \</span>
 <span>  --delivery docker:local --yes</span></code></pre>
           <p>
-            <code>@latest</code> remains the stable channel. Use <code>@next</code> for the alpha. Unsupported
-            selections fail before MonoX writes a project or changes infrastructure.
+            Use <code>@latest</code> interactively. Pin <code>@0.2.0</code> in repeatable setup scripts.
+            Unsupported selections fail before MonoX writes a project or changes infrastructure.
           </p>
         </aside>
       </section>
@@ -231,10 +231,16 @@
             >
           </li>
         </ol>
-        <pre class="flow-command" tabindex="0"><code><span>monox validate</span>
-<span>monox config explain @my-product/jobs --env staging</span>
-<span>monox plan --env staging --all --output .monox/plan.json</span>
-<span>monox apply --plan .monox/plan.json</span></code></pre>
+        <p>
+          <strong>0.2.0 boundary:</strong> <code>create-monox</code> writes these contracts, but it does not
+          install a public <code>monox</code> delivery binary. The sequence below is source-repository
+          tooling, not a generated-project command.
+        </p>
+        <pre class="flow-command" tabindex="0"><code><span># MonoX source checkout</span>
+<span>yarn monox validate</span>
+<span>yarn monox config explain @monox/jobs --env staging</span>
+<span>yarn monox plan --env staging --all --output .monox/plan.json</span>
+<span>yarn monox apply --plan .monox/plan.json</span></code></pre>
       </section>
 
       <section class="responsibility" aria-labelledby="responsibility-title">
@@ -253,7 +259,7 @@
 
       <section class="catalog" id="catalog" aria-labelledby="catalog-title">
         <div class="section-intro">
-          <p class="context">0.2 alpha evidence</p>
+          <p class="context">0.2 release evidence</p>
           <h2 id="catalog-title">Implemented, guarded and still awaiting production proof</h2>
           <p>
             Status is tied to tests in the public repository. Planned production claims stay out of the copy.
@@ -264,7 +270,7 @@
             <thead>
               <tr>
                 <th scope="col">Surface</th>
-                <th scope="col">Alpha status</th>
+                <th scope="col">Release status</th>
                 <th scope="col">Evidence</th>
               </tr>
             </thead>
@@ -288,13 +294,13 @@
               </tr>
               <tr>
                 <th scope="row">PM2, SSH, Coolify and Kubernetes</th>
-                <td><span class="status guarded">Guarded alpha</span></td>
+                <td><span class="status guarded">Guarded</span></td>
                 <td>Typed plans and fail-closed transport injection before external state changes</td>
               </tr>
               <tr>
                 <th scope="row">AWS and GCP provisioning</th>
                 <td><span class="status guarded">Plan only</span></td>
-                <td>OIDC-oriented provider plans; real sandbox apply remains a release gate</td>
+                <td>0.2.0 renders provider plans only; real sandbox apply is not included</td>
               </tr>
               <tr>
                 <th scope="row">Production reference</th>

@@ -6,10 +6,11 @@ infrastructure.
 
 ## Read-only inventory
 
-Run from a clean clone of the repository being assessed:
+Run the source-tree CLI from a clean MonoX checkout and point `--root` at the repository being assessed.
+`create-monox@0.2.0` does not install this CLI in generated projects.
 
 ```sh
-monox migrate deployment \
+yarn monox migrate deployment \
   --from legacy-production \
   --root . \
   --output .monox/migration-report.json
@@ -46,7 +47,7 @@ marks the candidate ready.
 To create a report that can be reviewed outside the private repository:
 
 ```sh
-monox migrate deployment \
+yarn monox migrate deployment \
   --from legacy-production \
   --root . \
   --redact-identifiers \

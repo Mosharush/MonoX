@@ -1,8 +1,8 @@
 # MonoX 0.2 deployment model
 
-MonoX separates validation, planning, rendering and external state changes. The `0.2.0-alpha.1` source is safe
-to use for contract evaluation and offline artifacts. Local Docker Compose uses a built-in allowlisted
-executor; live remote apply remains gated by adapter support and an explicitly injected transport.
+MonoX separates validation, planning, rendering and external state changes. The `0.2.0` source is safe to use
+for contract evaluation and offline artifacts. Local Docker Compose uses a built-in allowlisted executor; live
+remote apply remains gated by adapter support and an explicitly injected transport.
 
 ## Package-owned deployment contract
 
@@ -88,19 +88,22 @@ resolved by the selected runtime. Unknown fields and secret-like inline values f
 Resolution fails if an enabled workload or variant matches no target or more than one target in the selected
 environment.
 
-## CLI flow
+## Source-tree CLI flow
+
+These commands run from a MonoX source checkout through the root `yarn monox` script. `create-monox@0.2.0`
+writes the contracts but does not install a public delivery CLI in generated projects.
 
 ```sh
-monox validate
-monox config explain api --env local
-monox doctor --env local
-monox plan --env local --all --output .monox/plans/local.json
-monox render --env local --target local-docker --all --output-dir .monox/rendered
-monox deploy --env local --all
-monox apply --plan .monox/plans/local.json
-monox status --env local --target local-docker
-monox rollback --env local --target local-docker --revision <revision>
-monox destroy --env local --target local-docker --confirm example/local/local-docker
+yarn monox validate
+yarn monox config explain api --env local
+yarn monox doctor --env local
+yarn monox plan --env local --all --output .monox/plans/local.json
+yarn monox render --env local --target local-docker --all --output-dir .monox/rendered
+yarn monox deploy --env local --all
+yarn monox apply --plan .monox/plans/local.json
+yarn monox status --env local --target local-docker
+yarn monox rollback --env local --target local-docker --revision <revision>
+yarn monox destroy --env local --target local-docker --confirm example/local/local-docker
 ```
 
 `plan`, `render` and `deploy` require exactly one workload selector: `--all`, `--select <ids>` or
@@ -117,7 +120,7 @@ require:
 - `target.bindings.identityRef` for the approved OIDC or workload identity.
 
 Destroy requires the exact `project/environment/target` confirmation string. The same rule applies to
-`monox cloud destroy`. A normal deployment plan does not contain a blanket delete of unmanaged resources.
+`yarn monox cloud destroy`. A normal deployment plan does not contain a blanket delete of unmanaged resources.
 
 ## Plans and receipts
 
@@ -137,7 +140,7 @@ Deploy refuses a multi-target mutation so one failed target cannot leave a secon
 validates every artifact before writing to a sibling staging directory and promotes the complete directory
 atomically.
 
-## Adapter status in `0.2.0-alpha.1`
+## Adapter status in `0.2.0`
 
 | Path                 | What the source currently does                                                                                 | What is not yet proven                                |
 | -------------------- | -------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
@@ -189,7 +192,7 @@ that marker remains. Stateful production add-ons remain opt-in, with managed or 
 Migration is report-first:
 
 ```sh
-monox migrate deployment \
+yarn monox migrate deployment \
   --from legacy-production \
   --root /path/to/repository \
   --output .monox/migration-report.json
