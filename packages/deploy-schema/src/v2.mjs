@@ -15,7 +15,7 @@ const quantityPattern = /^(?:[1-9][0-9]*(?:m|Ki|Mi|Gi|Ti)?|0\.[0-9]+)$/;
 const enums = Object.freeze({
   kind: ['service', 'worker', 'cron', 'job', 'model', 'static'],
   buildStrategy: ['dockerfile', 'buildpack', 'static', 'none'],
-  language: ['javascript', 'typescript', 'python', 'php', 'go'],
+  language: ['javascript', 'typescript', 'python', 'php', 'go', 'container'],
   exposure: ['none', 'internal', 'public'],
   protocol: ['TCP', 'UDP'],
   pathType: ['Exact', 'Prefix', 'ImplementationSpecific'],

@@ -24,7 +24,9 @@ substitutions.
 
 An internal application and a public gateway can be selected together. Give each its own v2 `id`, immutable
 image, runtime command, ports and readiness probe. Use an exec probe when the image does not include `wget`
-for HTTP or `nc` for TCP checks. The application keeps its state through a named volume:
+for HTTP or `nc` for TCP checks. Declare a generic image service such as nginx with
+`runtime: { language: 'container', command: ['nginx', '-g', 'daemon off;'] }`. The application keeps its state
+through a named volume:
 
 ```json
 {

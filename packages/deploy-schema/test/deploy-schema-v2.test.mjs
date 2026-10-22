@@ -118,6 +118,19 @@ test('normalizes a strict provider-neutral workload with secure defaults', () =>
   assert.deepEqual(result.env, { values: {}, secretRefs: [] });
 });
 
+test('accepts an explicit generic container runtime while preserving image and command validation', () => {
+  const input = workload({
+    build: { strategy: 'none', image: { repository: 'nginx', tag: '1.28-alpine' } },
+    runtime: { language: 'container', command: ['nginx', '-g', 'daemon off;'] },
+  });
+  assert.equal(assertValidDeploymentSpecV2(input).runtime.language, 'container');
+  input.runtime.command = [];
+  assert.equal(validateDeploymentSpecV2(input).valid, false);
+  input.runtime.command = ['nginx'];
+  input.build.image.tag = 'latest';
+  assert.equal(validateDeploymentSpecV2(input).valid, false);
+});
+
 test('supports partial RFC 7396 overlay shapes without weakening resolved validation', () => {
   for (const patch of [
     { network: { routes: [{ path: '/v2' }] } },
