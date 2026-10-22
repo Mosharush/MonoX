@@ -119,6 +119,19 @@ test('Coolify routing is optional and never assigns the target domain to an inte
   assert.equal(renderDockerCompose([gateway]).services.gateway.labels, undefined);
 });
 
+test('renders an explicitly generic container gateway without claiming an application language', () => {
+  const gateway = workload('gateway');
+  gateway.deployment.build = { strategy: 'none', image: { repository: 'nginx', tag: '1.28-alpine' } };
+  gateway.deployment.runtime = { language: 'container', command: ['nginx', '-g', 'daemon off;'] };
+  gateway.deployment.network.ports = [{ name: 'http', containerPort: 80 }];
+  gateway.deployment.probes.readiness = { type: 'http', path: '/healthz', port: 'http' };
+  const service = renderDockerCompose([gateway], { mode: 'coolify' }).services.gateway;
+  assert.equal(service.image, 'nginx:1.28-alpine');
+  assert.deepEqual(service.command, ['nginx', '-g', 'daemon off;']);
+  assert.deepEqual(service.expose, ['80']);
+  assert.equal(service.healthcheck.test.at(-1), 'http://127.0.0.1:80/healthz');
+});
+
 test('digest images, named probe ports and optional references retain their intended meanings', () => {
   const input = workload();
   input.deployment.build.image = {
