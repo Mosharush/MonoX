@@ -85,7 +85,7 @@ function cpuCount(value) {
   return result;
 }
 
-function storage(deployment, namedVolumes) {
+function storage(deployment, namedVolumes, mode) {
   const mounts = [],
     tmpfs = [],
     paths = new Set();
@@ -108,6 +108,10 @@ function storage(deployment, namedVolumes) {
         read_only: volume.readOnly ?? false,
       });
     } else {
+      if (mode === 'coolify')
+        throw new TypeError(
+          `${deployment.id}: Coolify does not accept unresolved config/secret bind sources; use a preprovisioned external volume mounted read-only`
+        );
       if (volume.readOnly === false)
         throw new TypeError(`${deployment.id}: config and secret file mounts must be read-only`);
       const reference = `MONOX_FILE_${volume.sourceRef.replaceAll('-', '_').toUpperCase()}`;
@@ -181,7 +185,7 @@ export function renderDockerCompose(workloads, { name = 'monox', mode = 'docker'
       mem_limit: memoryBytes(deployment.resources.limits.memory),
       mem_reservation: memoryBytes(deployment.resources.requests.memory),
       stop_grace_period: `${deployment.lifecycle.terminationGracePeriodSeconds}s`,
-      ...storage(deployment, volumes),
+      ...storage(deployment, volumes, mode),
       ...(Object.keys(labels).length
         ? { labels: Object.fromEntries(Object.entries(labels).map(([key, value]) => [key, literal(value)])) }
         : {}),

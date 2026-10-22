@@ -86,6 +86,24 @@ test('requires a token reference and needs an injected HTTP transport', async ()
   await assert.rejects(() => adapter.apply(plan, input), /context\.coolify\.request/);
 });
 
+test('rejects unresolved file bindings before a Coolify API request can be planned', async () => {
+  const adapter = createCoolifyCloudapter();
+  const input = context();
+  input.workloads[0].deployment.storage = [
+    {
+      name: 'auth',
+      type: 'secret',
+      sourceRef: 'gateway-auth',
+      mountPath: '/etc/gateway/auth',
+      readOnly: true,
+    },
+  ];
+  const validation = await adapter.validate(input);
+  assert.equal(validation.valid, false);
+  assert(validation.errors.some((error) => error.includes('unresolved config/secret bind sources')));
+  await assert.rejects(() => adapter.plan(input), /unresolved config\/secret bind sources/);
+});
+
 test('health gates Coolify apply and invokes rollback on failure', async () => {
   const adapter = createCoolifyCloudapter();
   const input = context();

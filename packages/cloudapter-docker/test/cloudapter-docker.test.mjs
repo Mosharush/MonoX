@@ -104,6 +104,39 @@ test('external persistent volumes remain externally owned and service-local name
   });
 });
 
+test('rejects unresolved config and secret bind sources in Coolify mode only', () => {
+  for (const type of ['config', 'secret']) {
+    const input = workload('gateway');
+    input.deployment.storage = [
+      { name: 'auth', type, sourceRef: 'gateway-auth', mountPath: '/etc/gateway/auth', readOnly: true },
+    ];
+    assert.throws(
+      () => renderDockerCompose([input], { mode: 'coolify' }),
+      /Coolify does not accept unresolved config\/secret bind sources/
+    );
+    assert.equal(renderDockerCompose([input]).services.gateway.volumes[0].type, 'bind');
+  }
+});
+
+test('Coolify supports preprovisioned external volumes mounted read-only', () => {
+  const input = workload('gateway');
+  input.deployment.storage = [
+    {
+      name: 'auth',
+      type: 'persistent',
+      sourceRef: 'gateway-auth',
+      size: '1Mi',
+      mountPath: '/etc/gateway/auth',
+      readOnly: true,
+    },
+  ];
+  const compose = renderDockerCompose([input], { mode: 'coolify' });
+  assert.deepEqual(compose.volumes, { 'gateway-auth': { external: true, name: 'gateway-auth' } });
+  assert.deepEqual(compose.services.gateway.volumes, [
+    { type: 'volume', source: 'gateway-auth', target: '/etc/gateway/auth', read_only: true },
+  ]);
+});
+
 test('Coolify routing is optional and never assigns the target domain to an internal workload', () => {
   const api = workload(),
     gateway = workload('gateway');
