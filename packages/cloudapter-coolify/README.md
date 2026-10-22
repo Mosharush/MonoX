@@ -5,11 +5,14 @@ contains base64-encoded Docker Compose source and a bearer token reference, neve
 secret environment values use Compose `${NAME:?required}` expressions.
 
 Compose is rendered by `@monox/cloudapter-docker`, shared with generic Docker planning. It includes immutable
-images, healthchecks, CPU/memory limits, persistent named volumes and read-only existing config/secret file
-bindings. `storage.sourceRef` for a config or secret becomes a required `MONOX_FILE_<REFERENCE>` environment
-binding with `create_host_path: false`. Only public workloads inherit the optional target domain; internal
-services remain internal. Image building and host-file provisioning stay explicit operator steps. See the
-[shared renderer contract](../cloudapter-docker/README.md) for supported intent and limitations.
+images, healthchecks, CPU/memory limits and persistent named volumes. Coolify 4.4.7 rejects unresolved
+`${...}` volume sources in its service API security validator, so `config` and `secret` file bindings fail
+validation before planning. To mount preprovisioned files, use a `persistent` storage item with `sourceRef`
+pointing to an existing external named volume and `readOnly: true`; the operator provisions and populates that
+volume separately. Generic Docker mode still supports the renderer's external file references. Only public
+workloads inherit the optional target domain; internal services remain internal. Image building and file
+provisioning stay explicit operator steps. See the [shared renderer contract](../cloudapter-docker/README.md)
+for supported intent and limitations.
 
 The generated plan declares `read`, `write` and `deploy` as required scopes and `root` as forbidden. The
 injected transport resolves `target.serverRef` and `target.bindings.identityRef`, verifies the actual token

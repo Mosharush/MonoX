@@ -39,7 +39,7 @@ container replacement. `size` remains portable intent, not a Docker disk quota. 
 `sourceRef` to reference an existing external Docker volume; MonoX does not create or delete that external
 volume. Storage classes are rejected because Compose cannot resolve them.
 
-A gateway can mount preprovisioned configuration and authentication files:
+In generic Docker mode, a gateway can mount preprovisioned configuration and authentication files:
 
 ```json
 {
@@ -59,6 +59,14 @@ This becomes a read-only bind mount from `${MONOX_FILE_GATEWAY_AUTH:?required}` 
 `bind.create_host_path: false`. The operator supplies the existing absolute path on the Docker host; only the
 reference is rendered. `config` storage follows the same convention. Writable secret/config mounts are
 rejected. `ephemeral` storage becomes a `tmpfs` mount. Missing files are not silently created as directories.
+
+Coolify 4.4.7 rejects unresolved `${...}` expressions in volume sources through its service API security
+validator. The renderer therefore rejects `config` and `secret` file bindings in `mode: 'coolify'` before a
+request can be planned. Generic Docker mode retains the file-reference behavior above. For Coolify, an
+operator can provision a named volume separately, populate it with the required files and declare it as
+`{ name: 'auth', type: 'persistent', sourceRef: 'gateway-auth', mountPath: '/etc/gateway/auth', size: '1Mi', readOnly: true }`.
+This mounts the existing external volume read-only. MonoX does not create or populate it, resolve file paths,
+read credentials or bypass Coolify's validation.
 
 `env.secretRefs` become `${NAME:?required}` (or `${NAME:-}` when explicitly optional). No secret values are
 read or included. CPU/memory limits, memory reservations, working directory and termination grace are
