@@ -49,6 +49,7 @@ __metadata:
     "@monox/affected": "workspace:^"
     "@monox/cloudapter-coolify": "workspace:^"
     "@monox/cloudapter-core": "workspace:^"
+    "@monox/cloudapter-docker": "workspace:^"
     "@monox/cloudapter-kubernetes": "workspace:^"
     "@monox/cloudapter-local": "workspace:^"
     "@monox/cloudapter-pm2": "workspace:^"
@@ -67,6 +68,7 @@ __metadata:
   resolution: "@monox/cloudapter-coolify@workspace:packages/cloudapter-coolify"
   dependencies:
     "@monox/cloudapter-core": "workspace:^"
+    "@monox/cloudapter-docker": "workspace:^"
     "@monox/deploy-schema": "workspace:^"
   languageName: unknown
   linkType: soft
@@ -74,6 +76,15 @@ __metadata:
 "@monox/cloudapter-core@workspace:^, @monox/cloudapter-core@workspace:packages/cloudapter-core":
   version: 0.0.0-use.local
   resolution: "@monox/cloudapter-core@workspace:packages/cloudapter-core"
+  languageName: unknown
+  linkType: soft
+
+"@monox/cloudapter-docker@workspace:^, @monox/cloudapter-docker@workspace:packages/cloudapter-docker":
+  version: 0.0.0-use.local
+  resolution: "@monox/cloudapter-docker@workspace:packages/cloudapter-docker"
+  dependencies:
+    "@monox/cloudapter-core": "workspace:^"
+    "@monox/deploy-schema": "workspace:^"
   languageName: unknown
   linkType: soft
 
