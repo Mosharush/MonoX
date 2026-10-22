@@ -9,10 +9,11 @@ Unsupported remote transports and plan-only providers fail closed. Destruction r
 In 0.2.0 this package is public source but npm-private. Run it from a MonoX source checkout through the root
 `yarn monox` script. `create-monox@0.2.0` does not install this executable in generated projects.
 
-The executable selects the built-in local, PM2, Coolify, Kubernetes, static, AWS or GCP Cloudapter from target
-axes. The SSH package is a transport primitive and is not presented as a complete Docker delivery path. Each
-adapter can plan and render without credentials. Local Docker targets use the built-in safe Compose executor;
-other apply paths fail closed until their explicit transport or provider executor is injected.
+The executable selects the built-in local, Docker, PM2, Coolify, Kubernetes, static, AWS or GCP Cloudapter
+from target axes. Remote Docker targets support shared Compose planning and rendering; apply requires an
+explicitly injected executor. The SSH package is a transport primitive and is not a complete Docker delivery
+path. Each adapter can plan and render without credentials. Local Docker targets use the built-in safe Compose
+executor; other apply paths fail closed until their explicit transport or provider executor is injected.
 `NoopCloudapter` remains available for tests and custom inspection workflows, and never claims an external
 state change.
 

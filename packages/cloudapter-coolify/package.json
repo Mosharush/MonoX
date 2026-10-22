@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@monox/cloudapter-core": "workspace:^",
+    "@monox/cloudapter-docker": "workspace:^",
     "@monox/deploy-schema": "workspace:^"
   },
   "engines": {

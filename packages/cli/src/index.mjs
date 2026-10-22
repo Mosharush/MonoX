@@ -16,6 +16,7 @@ import path from 'node:path';
 
 import { affectedFromGit } from '@monox/affected';
 import { createCoolifyCloudapter } from '@monox/cloudapter-coolify';
+import { createDockerCloudapter } from '@monox/cloudapter-docker';
 import { createKubernetesCloudapter } from '@monox/cloudapter-kubernetes';
 import { createLocalCloudapter } from '@monox/cloudapter-local';
 import { createPm2Cloudapter } from '@monox/cloudapter-pm2';
@@ -131,6 +132,7 @@ function builtInAdapter(target, scope) {
     return createKubernetesCloudapter();
   if (target.runtime === 'pm2') return createPm2Cloudapter();
   if (target.runtime === 'docker' && target.transport === 'local') return createLocalCloudapter();
+  if (target.runtime === 'docker') return createDockerCloudapter();
   if (target.runtime === 'static') return createStaticCloudapter();
   return undefined;
 }
