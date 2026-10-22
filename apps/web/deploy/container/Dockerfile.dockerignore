@@ -1,0 +1,10 @@
+**
+!apps/
+!apps/web/
+!apps/web/public/
+!apps/web/public/**
+!apps/web/deploy/
+!apps/web/deploy/container/
+!apps/web/deploy/container/Dockerfile
+!apps/web/deploy/container/Dockerfile.dockerignore
+!apps/web/deploy/container/nginx.conf
