@@ -75,6 +75,9 @@ my-product/
 The generator refuses nonempty and symlink destinations. Bundled recipes are versioned and deterministic; it
 does not clone a live repository. Unsupported combinations fail before project files are written.
 
+Follow the [generated project cookbook](docs/generated-project-cookbook.md) to inspect the output, prepare a
+dependency lockfile, run the generated CI checks and verify the example API's health endpoint.
+
 ## What MonoX wires for you
 
 - workspace layout, package-manager configuration and dependency direction;

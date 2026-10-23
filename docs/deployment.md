@@ -29,7 +29,7 @@ A runnable workspace owns one `package.json.deployment` v2 document:
   },
   "probes": {
     "readiness": { "type": "http", "path": "/readyz", "port": "http" },
-    "liveness": { "type": "http", "path": "/healthz", "port": "http" }
+    "liveness": { "type": "http", "path": "/livez", "port": "http" }
   },
   "env": {
     "values": { "NODE_ENV": "production" },
@@ -53,6 +53,16 @@ A runnable workspace owns one `package.json.deployment` v2 document:
 
 `env.values` is limited to non-secret strings. Credentials are represented only by `env.secretRefs` and are
 resolved by the selected runtime. Unknown fields and secret-like inline values fail validation.
+
+The example probe paths match [`@monox/app-runtime`](../packages/app-runtime/README.md): `/readyz` returns 200
+when its readiness flag is true, `/livez` returns 200 when its liveness flag is true, and `/healthz` requires
+both. Using `/healthz` for liveness also fails that probe when an otherwise live application is not ready.
+Applications own these flags; the runtime does not automatically check databases or other dependencies.
+
+Probe paths must match the application's implementation. For example, the generated `node-fastify-api` recipe
+uses `/health` for all three probes and does not import `@monox/app-runtime`. See the
+[generated project cookbook](generated-project-cookbook.md#4-check-the-applications-actual-health-contract)
+for its runnable health check.
 
 ## Root target selection
 
