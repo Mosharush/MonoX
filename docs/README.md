@@ -1,6 +1,8 @@
 # MonoX documentation
 
 - [Architecture](architecture.md): source-of-truth boundaries, resolution and package map.
+- [Generated project cookbook](generated-project-cookbook.md): inspect contracts, prepare the dependency lock,
+  run generated CI checks and distinguish application health from delivery evidence.
 - [Deployment](deployment.md): workload contract, CLI flow, adapters, scaling and safety gates.
 - [Capability status](capability-status.md): evidence-backed wording for public material.
 - [Migration](migration.md): read-only inventory, mapping rules and rollout sequence.
