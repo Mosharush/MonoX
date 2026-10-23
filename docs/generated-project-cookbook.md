@@ -79,10 +79,10 @@ npx --yes npm@12.0.1 run build
 explicit lockfile check.
 
 The generated root test checks that workspace manifests are private and use deployment schema v2 where
-present. The selected workspace test files start with placeholder assertions, so a green run is only a
-starting point. Replace or extend them with product behavior tests before treating them as evidence for a
-feature. For example, an API change needs assertions about its response and failure behavior, not just a
-successful process start.
+present. The API and worker test scripts run placeholder assertions; the web workspace's `test` script runs
+`vite build`. Add product behavior tests and configure the relevant workspace script to execute them before
+treating a green run as evidence for a feature. For example, an API change needs assertions about its response
+and failure behavior, not just a successful process start.
 
 Generated CI runs immutable installation, selection verification, tests and builds on Node.js 22, 24 and 26.
 It does not deploy the application or include every security and acceptance gate from the MonoX source
