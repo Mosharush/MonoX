@@ -40,6 +40,6 @@
     "workspaces:list": "node packages/workspaces/src/cli.mjs"
   },
   "devDependencies": {
-    "prettier": "^3.6.2"
+    "prettier": "^3.9.8"
   }
 }
