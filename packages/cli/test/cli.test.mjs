@@ -249,7 +249,7 @@ test('built-in local adapter receives the safe Compose executor without caller c
   assert.ok(factories >= 2);
 });
 
-test('selects PM2 before its SSH transport and rejects incomplete remote Docker composition', async (context) => {
+test('selects PM2 before SSH and renders remote Docker without inferring execution', async (context) => {
   const root = await fixture(context);
   const stdout = output();
   const configFile = path.join(root, 'monox.config.json');
@@ -272,7 +272,18 @@ test('selects PM2 before its SSH transport and rejects incomplete remote Docker 
   await writeFile(configFile, JSON.stringify(config));
   await assert.rejects(
     () => run(['plan', '--env', 'local', '--all'], { cwd: root, stdout: stdout.stream }),
-    /No delivery adapter is available for target local-docker/
+    /immutable image/
+  );
+  const manifest = packageManifest();
+  manifest.deployment.build.image = { repository: 'registry.invalid/example/api', tag: '0.2.0' };
+  await writeFile(path.join(root, 'apps', 'api', 'package.json'), JSON.stringify(manifest));
+  const docker = await run(['plan', '--env', 'local', '--all'], { cwd: root, stdout: stdout.stream });
+  assert.equal(docker.plans[0].adapter.id, 'docker');
+  assert.equal(docker.plans[0].actions[0].name, 'example-local');
+  assert.match(docker.plans[0].actions[0].composeDigest, /^sha256:/);
+  await assert.rejects(
+    () => run(['deploy', '--env', 'local', '--all'], { cwd: root, stdout: stdout.stream }),
+    /no apply executor configured/
   );
 });
 

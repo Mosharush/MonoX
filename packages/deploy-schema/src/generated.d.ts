@@ -3,7 +3,7 @@
 
 export type DeploymentKind = 'service' | 'worker' | 'cron' | 'job' | 'model' | 'static';
 export type DeploymentBuildStrategy = 'dockerfile' | 'buildpack' | 'static' | 'none';
-export type DeploymentLanguage = 'javascript' | 'typescript' | 'python' | 'php' | 'go';
+export type DeploymentLanguage = 'javascript' | 'typescript' | 'python' | 'php' | 'go' | 'container';
 export type DeploymentExposure = 'none' | 'internal' | 'public';
 export type DeploymentScalingMode = 'none' | 'hpa' | 'keda';
 export type DeploymentMetricType =

@@ -43,7 +43,7 @@
       "additionalProperties": false,
       "required": ["language", "command"],
       "properties": {
-        "language": { "enum": ["javascript", "typescript", "python", "php", "go"] },
+        "language": { "enum": ["javascript", "typescript", "python", "php", "go", "container"] },
         "framework": { "type": "string", "pattern": "^[a-z][a-z0-9.-]{0,62}$" },
         "command": { "$ref": "#/$defs/nonEmptyStringArray" },
         "workingDirectory": { "type": "string", "minLength": 1 },

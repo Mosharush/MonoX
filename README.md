@@ -172,10 +172,10 @@ add-ons are opt-in; production defaults to managed or external services.
 
 ## Delivery adapters
 
-The source includes a built-in local Docker Compose executor, bundled PM2, Coolify and Kubernetes adapters
-that require injected transports, an SSH transport primitive, and plan-only AWS and GCP providers. Adapter
-methods are versioned through `Cloudapter`: `doctor`, `validate`, `plan`, `render`, `apply`, `status`,
-`rollback` and `destroy`.
+The source includes a built-in local Docker Compose executor, a shared generic Docker/Coolify Compose
+renderer, bundled PM2, Coolify and Kubernetes adapters that require injected transports, an SSH transport
+primitive, and plan-only AWS and GCP providers. Adapter methods are versioned through `Cloudapter`: `doctor`,
+`validate`, `plan`, `render`, `apply`, `status`, `rollback` and `destroy`.
 
 Local Docker Compose has a built-in executor that runs only allowlisted `docker compose` argument arrays with
 `shell: false`, bounded readiness checks and explicit owned services. PM2, SSH, Coolify and Kubernetes retain
