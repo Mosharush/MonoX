@@ -4,6 +4,12 @@ All notable changes will be documented here.
 
 ## Unreleased
 
+### Security
+
+- Update the Fastify API recipe to Fastify 5.12.7 and the React, Vue and SvelteKit recipes to Vite 8.1.6,
+  addressing advisories affecting the previous pins. Bump those recipe patch versions so new `monox.lock`
+  selections record the update. Existing generated projects must update their own dependencies and lockfiles.
+
 ## 0.2.0 - 2026-07-26
 
 Version 0.2.0 stabilizes deterministic project generation, package-owned deployment contracts and the
