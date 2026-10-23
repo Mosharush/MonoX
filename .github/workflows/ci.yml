@@ -39,7 +39,8 @@ jobs:
           docker run --detach --rm --name monox-web-smoke --publish 127.0.0.1:8080:80 monox-web:ci
           trap 'docker rm --force monox-web-smoke >/dev/null 2>&1 || true' EXIT
           docker exec monox-web-smoke nginx -t
-          curl --fail --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:8080/healthz
+          curl --fail --silent --show-error --max-time 5 --retry 10 --retry-all-errors \
+            --retry-delay 1 --retry-max-time 30 http://127.0.0.1:8080/healthz
           node scripts/check-static-web-container.mjs
 
   quality:
