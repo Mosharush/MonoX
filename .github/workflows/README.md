@@ -28,6 +28,10 @@ environment.
   24, and 26. It also runs dependency review, dependency audit, full-history secret scanning and generates an
   SPDX JSON source SBOM. Dependency review requires a public repository or the corresponding GitHub security
   entitlement.
+- `deploy-site.yml` waits for the same-main-commit CI, release acceptance, Kubernetes smoke and default CodeQL
+  runs, then requests static-site deployment through an environment-scoped restricted SSH gateway. It skips
+  stale revisions and verifies the public commit marker. Native Coolify push deployment must stay disabled;
+  see [site deployment](../../docs/site-deployment.md) for the required server and environment contract.
 - `release-acceptance.yml` verifies the seven synthetic migration goldens and generates one representative
   Node, Python, PHP and Go project. It installs each selected toolchain, verifies `monox.lock`, builds and
   tests the workspaces, then starts the Node, Python and Laravel APIs and probes their health endpoints. A
@@ -61,9 +65,9 @@ publishing without a long-lived npm token.
 CodeQL uses GitHub default setup with JavaScript and TypeScript analysis. Keep that repository-level setup
 instead of adding a duplicate advanced workflow.
 
-There is intentionally no workflow with static cloud credentials. Cloud apply workflows may be added only
-after an environment, threat model, OIDC trust policy, protected environment and exact adapter scope are
-reviewed.
+The site workflow uses a dedicated, restricted SSH transport key, not account-wide cloud credentials. Cloud
+apply workflows may be added only after an environment, threat model, OIDC trust policy, protected environment
+and exact adapter scope are reviewed.
 
 ## Action pinning
 
