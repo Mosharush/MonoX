@@ -18,6 +18,30 @@ env:
   COREPACK_ENABLE_DOWNLOAD_PROMPT: 0
 
 jobs:
+  static-web-container:
+    name: Static web container
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+      - name: Build and probe the production static container
+        env:
+          SOURCE_COMMIT: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          docker build --build-arg "SOURCE_COMMIT=${SOURCE_COMMIT}" \
+            -f apps/web/deploy/container/Dockerfile -t monox-web:ci .
+          docker run --detach --rm --name monox-web-smoke --publish 127.0.0.1:8080:80 monox-web:ci
+          trap 'docker rm --force monox-web-smoke >/dev/null 2>&1 || true' EXIT
+          docker exec monox-web-smoke nginx -t
+          curl --fail --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:8080/healthz
+          node scripts/check-static-web-container.mjs
+
   quality:
     name: Quality and compatibility (Node ${{ matrix.node }})
     runs-on: ubuntu-latest

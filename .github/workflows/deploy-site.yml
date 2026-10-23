@@ -1,0 +1,77 @@
+name: Deploy public site
+
+on:
+  workflow_run:
+    workflows: [CI, 0.2 release acceptance, Kubernetes runtime smoke, CodeQL, Push on main]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+# Multiple completions for one revision coalesce; different revisions reach the server's app lock.
+concurrency:
+  group: site-production-${{ github.event.workflow_run.head_sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || (github.event_name ==
+      'workflow_run' && github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.id == github.repository_id && (github.event.workflow_run.event
+      == 'push' || (github.event.workflow_run.event == 'dynamic' && github.event.workflow_run.path ==
+      'dynamic/github-code-scanning/codeql')))
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    outputs:
+      eligible: ${{ steps.gate.outputs.eligible }}
+      sha: ${{ steps.gate.outputs.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+      - name: Wait for the exact main revision's CI and CodeQL
+        id: gate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          COOLIFY_GATE_WAIT_SECONDS: '1200'
+        run: node scripts/coolify-ci-gate.mjs
+
+  deploy:
+    needs: gate
+    if: needs.gate.outputs.eligible == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: production
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.gate.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+      - name: Recheck current main and current workflow attempts after queueing
+        id: gate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          COOLIFY_GATE_WAIT_SECONDS: '0'
+        run: node scripts/coolify-ci-gate.mjs
+      - name: Deploy the verified commit through the restricted gateway
+        if: steps.gate.outputs.eligible == 'true'
+        env:
+          DEPLOYMENT_COMMIT: ${{ needs.gate.outputs.sha }}
+          GITHUB_TOKEN: ${{ github.token }}
+          COOLIFY_SSH_PRIVATE_KEY: ${{ secrets.COOLIFY_SSH_PRIVATE_KEY }}
+          COOLIFY_SSH_KNOWN_HOSTS: ${{ secrets.COOLIFY_SSH_KNOWN_HOSTS }}
+          COOLIFY_SSH_HOST: ${{ vars.COOLIFY_SSH_HOST }}
+          COOLIFY_SSH_USER: ${{ vars.COOLIFY_SSH_USER }}
+          DEPLOYMENT_VERIFY_URL: ${{ vars.DEPLOYMENT_VERIFY_URL }}
+        run: node scripts/deploy-coolify-ssh.mjs

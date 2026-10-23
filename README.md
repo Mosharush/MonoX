@@ -25,6 +25,9 @@ to keep in sync.
 [Deployment contract](docs/deployment.md) | [create-monox on npm](https://www.npmjs.com/package/create-monox)
 | [Security gate](docs/security-gate.md)
 
+The repository's static site uses a separate [CI-gated deployment path](docs/site-deployment.md). This does
+not enable automatic hosting for generated projects.
+
 ## Generate a product
 
 Create a project from the stable channel:
