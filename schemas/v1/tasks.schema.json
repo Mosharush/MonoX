@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://monox.dev/schemas/v1/tasks.schema.json",
+  "title": "MonoX task graph",
+  "description": "Local selective-execution contract. The planner additionally rejects unsafe input globs, cycles, undeclared changes, and incomplete workspace bindings, and then runs tasks instead of skipping them.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "tasks"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "minLength": 1
+    },
+    "schemaVersion": {
+      "const": "1"
+    },
+    "tasks": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^[A-Za-z0-9:_-]{1,64}$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/task"
+      }
+    }
+  },
+  "$defs": {
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["inputs"],
+      "properties": {
+        "dependsOn": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^\\^?[A-Za-z0-9:_-]{1,64}$"
+          }
+        },
+        "inputs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "outputs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "env": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Z_][A-Z0-9_]*$"
+          }
+        },
+        "cache": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

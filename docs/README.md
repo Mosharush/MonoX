@@ -9,6 +9,8 @@
 - [Capability status](capability-status.md): evidence-backed wording for public material.
 - [Migration](migration.md): read-only inventory, mapping rules and rollout sequence.
 - [Project configuration schema](config-schema.md): public `monox.config.json` contract and version migration.
+- [Task graph](task-graph.md): task identity, dependencies, local cache keys, dry-run reasons and fail-open
+  execution. Public CI keeps the complete repository gate.
 - [Security gate](security-gate.md): credential response and approved history cleanup.
 - [Agent contract](agent-contract.md): shared working boundaries for people and coding agents.
 - [Roadmap](roadmap.md): staged release slices and acceptance criteria.

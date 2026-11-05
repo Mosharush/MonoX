@@ -225,6 +225,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@monox/tasks@workspace:packages/tasks":
+  version: 0.0.0-use.local
+  resolution: "@monox/tasks@workspace:packages/tasks"
+  dependencies:
+    "@monox/affected": "workspace:^"
+    "@monox/workspaces": "workspace:^"
+  bin:
+    monox-tasks: ./src/cli.mjs
+  languageName: unknown
+  linkType: soft
+
 "@monox/telemetry@workspace:^, @monox/telemetry@workspace:packages/telemetry":
   version: 0.0.0-use.local
   resolution: "@monox/telemetry@workspace:packages/telemetry"

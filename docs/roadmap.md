@@ -105,6 +105,12 @@ Every `0.2.x` package release requires:
 A production capability or case-study claim additionally requires its live evidence above. Package stability
 does not waive that rule.
 
+### Local task planning
+
+`@monox/tasks` defines task identity, dependency rules, local cache keys, dry-run explanations and fail-open
+behavior. The cache stays on disk under `.monox/cache/tasks`. Public CI continues to run the complete
+repository gate. Using the graph to skip public CI jobs requires a separate approval.
+
 ## Non-goals during 0.2
 
 - copying source or Git history from a private product;

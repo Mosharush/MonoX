@@ -1,0 +1,20 @@
+{
+  "name": "@monox/tasks",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "monox-tasks": "./src/cli.mjs"
+  },
+  "exports": {
+    ".": "./src/index.mjs",
+    "./cli": "./src/cli.mjs"
+  },
+  "scripts": {
+    "build": "node ../../scripts/build-workspace.mjs"
+  },
+  "dependencies": {
+    "@monox/affected": "workspace:^",
+    "@monox/workspaces": "workspace:^"
+  }
+}

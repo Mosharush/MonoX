@@ -1,0 +1,18 @@
+{
+  "$schema": "../v1/tasks.schema.json",
+  "schemaVersion": "1",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["package.json", "src/**"],
+      "outputs": ["dist/**"],
+      "env": ["NODE_ENV"]
+    },
+    "test": {
+      "dependsOn": ["^build", "build"],
+      "inputs": ["package.json", "src/**", "test/**"],
+      "outputs": [],
+      "cache": true
+    }
+  }
+}

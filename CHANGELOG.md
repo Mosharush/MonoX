@@ -6,6 +6,10 @@ All notable changes will be documented here.
 
 ### Added
 
+- Define the 0.2 task graph: `package#task` identity, explicit `task` and `^task` dependencies, local cache
+  keys over every declared input, and dry-run reasons for run, skip and restore. Invalid or incomplete graphs
+  fail open to safe execution. Public CI still runs the complete repository gate. See
+  [task graph](docs/task-graph.md).
 - Generate `monox.config.json` from the public v2 project schema, copy that schema into generated projects and
   validate it in Yarn, npm and pnpm CI. Schema-byte drift and documents that violate the contract fail the
   generated check. See [config schema migration](docs/config-schema.md).
