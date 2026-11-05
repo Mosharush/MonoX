@@ -2,6 +2,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { resolveProjectDeployments, validateMonoXConfigV2 } from '../packages/config/src/index.mjs';
+import { validateJsonSchema } from '../packages/create-monox/src/json-schema.mjs';
 import { validateDeploymentSpecV2 } from '../packages/deploy-schema/src/index.mjs';
 import { discoverWorkspaces } from '../packages/workspaces/src/index.mjs';
 
@@ -114,6 +115,18 @@ for (const workspace of workspaces) {
 }
 
 const config = JSON.parse(await readFile(path.join(root, 'monox.config.json'), 'utf8'));
+const schemaPath = path.join(root, 'schemas/v2/monox.schema.json');
+const bundledSchemaPath = path.join(root, 'packages/create-monox/schema/v2/monox.schema.json');
+const schemaText = await readFile(schemaPath, 'utf8');
+if ((await readFile(bundledSchemaPath, 'utf8')) !== schemaText) {
+  failures.push(
+    'packages/create-monox/schema/v2/monox.schema.json drifted from schemas/v2/monox.schema.json'
+  );
+}
+const schemaResult = validateJsonSchema(config, JSON.parse(schemaText));
+for (const issue of schemaResult.errors) {
+  failures.push(`monox.config.json${issue.path.slice(1)} ${issue.message}`);
+}
 const configResult = validateMonoXConfigV2(config);
 for (const issue of configResult.errors) {
   failures.push(`monox.config.json${issue.path.slice(1)} ${issue.message}`);

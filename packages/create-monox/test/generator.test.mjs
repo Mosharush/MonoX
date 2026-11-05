@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { chmod, mkdtemp, mkdir, readFile, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -54,6 +55,8 @@ test('generates v2 package-owned deployment contracts and root-owned target conf
       'AGENTS.md',
       'monox.config.json',
       'monox.lock',
+      'schemas/v2/monox.schema.json',
+      'scripts/verify-monox-config.mjs',
       '.github/workflows/ci.yml',
       'apps/api/src/server.mjs',
       'apps/web/src/main.jsx',
@@ -70,6 +73,7 @@ test('generates v2 package-owned deployment contracts and root-owned target conf
       true,
       JSON.stringify(validateMonoXConfigV2(config).errors)
     );
+    assert.equal(config.$schema, './schemas/v2/monox.schema.json');
     assert.equal(config.schemaVersion, '2');
     assert.equal(Object.hasOwn(config, 'applications'), false);
     assert.deepEqual(config.environments.production.bindings, [
@@ -90,6 +94,7 @@ test('generates v2 package-owned deployment contracts and root-owned target conf
     assert.match(workflow, /persist-credentials: false/);
     assert.match(workflow, /node: \[22, 24, 26\]/);
     assert.match(workflow, /verify-monox-lock/);
+    assert.match(workflow, /node scripts\/verify-monox-config\.mjs/);
 
     const dockerReadme = await readFile(join(destination, 'infra/local/README.md'), 'utf8');
     assert.match(dockerReadme, /^# Local Docker\n/);
@@ -883,7 +888,15 @@ test('refuses a nonempty destination and validates names and workspace syntax be
     assert.equal(await readFile(join(destination, 'keep.txt'), 'utf8'), 'keep me\n');
   });
 
-  for (const name of ['../escape', 'Uppercase', '-leading', 'trailing-', 'with space', 'a'.repeat(64)]) {
+  for (const name of [
+    '../escape',
+    'Uppercase',
+    '-leading',
+    'trailing-',
+    '1app',
+    'with space',
+    'a'.repeat(64),
+  ]) {
     assert.throws(() => validateProjectName(name), /Project name must use/);
   }
   assert.deepEqual(parseWorkspaceSelection('api=node-fastify-api'), {
@@ -909,5 +922,65 @@ test('runs Git initialization and the pinned installer only when requested', asy
     ]);
     assert.equal(result.gitInitialized, true);
     assert.equal(result.installed, true);
+  });
+});
+
+test('validates generated configuration for Yarn, npm and pnpm and fails CI on schema drift', async () => {
+  const publicSchema = await readFile(
+    new URL('../../../schemas/v2/monox.schema.json', import.meta.url),
+    'utf8'
+  );
+  const validatorSource = await readFile(new URL('../src/json-schema.mjs', import.meta.url), 'utf8');
+  await withTemporaryDirectory(async (parent) => {
+    for (const packageManager of ['yarn', 'npm', 'pnpm']) {
+      const destination = join(parent, `${packageManager}-schema`);
+      await generateProject({
+        name: `${packageManager}-schema`,
+        directory: destination,
+        packageManager,
+        addons: ['redis'],
+        git: false,
+      });
+
+      assert.equal(await readFile(join(destination, 'schemas/v2/monox.schema.json'), 'utf8'), publicSchema);
+      assert.equal(await readFile(join(destination, 'scripts/json-schema.mjs'), 'utf8'), validatorSource);
+      const workflow = await readFile(join(destination, '.github/workflows/ci.yml'), 'utf8');
+      assert.match(workflow, /node scripts\/verify-monox-config\.mjs/);
+      const install = {
+        yarn: 'corepack@0.35.0 yarn install --immutable',
+        npm: 'npm@12.0.1 ci',
+        pnpm: 'corepack@0.35.0 pnpm install --frozen-lockfile',
+      }[packageManager];
+      assert.match(workflow, new RegExp(install.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)));
+
+      const passed = spawnSync(process.execPath, ['scripts/verify-monox-config.mjs'], {
+        cwd: destination,
+        encoding: 'utf8',
+      });
+      assert.equal(passed.status, 0, passed.stderr);
+
+      const configPath = join(destination, 'monox.config.json');
+      const originalConfig = await readFile(configPath, 'utf8');
+      const config = JSON.parse(originalConfig);
+      config.productTier = 'internal';
+      await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`);
+      const driftedConfig = spawnSync(process.execPath, ['scripts/verify-monox-config.mjs'], {
+        cwd: destination,
+        encoding: 'utf8',
+      });
+      assert.equal(driftedConfig.status, 1);
+      assert.match(driftedConfig.stderr, /\$\.productTier is not allowed/);
+      await writeFile(configPath, originalConfig);
+
+      const schemaPath = join(destination, 'schemas/v2/monox.schema.json');
+      const originalSchema = await readFile(schemaPath, 'utf8');
+      await writeFile(schemaPath, originalSchema.replace('"schemaVersion"', '"schemaVersion" '));
+      const driftedSchema = spawnSync(process.execPath, ['scripts/verify-monox-config.mjs'], {
+        cwd: destination,
+        encoding: 'utf8',
+      });
+      assert.equal(driftedSchema.status, 1);
+      assert.match(driftedSchema.stderr, /drifted from the generated MonoX project contract/);
+    }
   });
 });

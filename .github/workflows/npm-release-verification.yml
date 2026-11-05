@@ -304,3 +304,4 @@ jobs:
           )"
           NPM_CONFIG_CACHE="${smoke_cache}" npx --yes "npm@${generated_npm_version}" test
           node scripts/verify-monox-lock.mjs
+          node scripts/verify-monox-config.mjs

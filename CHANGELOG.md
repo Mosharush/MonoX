@@ -4,6 +4,17 @@ All notable changes will be documented here.
 
 ## Unreleased
 
+### Added
+
+- Generate `monox.config.json` from the public v2 project schema, copy that schema into generated projects and
+  validate it in Yarn, npm and pnpm CI. Schema-byte drift and documents that violate the contract fail the
+  generated check. See [config schema migration](docs/config-schema.md).
+
+### Changed
+
+- Require generated project names to start with a letter so `project.name` matches the public schema
+  identifier pattern.
+
 ### Security
 
 - Update the Fastify API recipe to Fastify 5.12.7 and the React, Vue and SvelteKit recipes to Vite 8.1.6,

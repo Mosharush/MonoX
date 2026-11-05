@@ -41,6 +41,7 @@
     }
   },
   "files": [
+    "schema",
     "src",
     "README.md",
     "LICENSE"

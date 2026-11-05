@@ -66,7 +66,9 @@ for its runnable health check.
 
 ## Root target selection
 
-`monox.config.json` owns environments and target bindings, without duplicating applications:
+`monox.config.json` owns environments and target bindings, without duplicating applications. Its public
+structural contract is [`schemas/v2/monox.schema.json`](../schemas/v2/monox.schema.json). Migration rules for
+that contract are in [config schema migration](config-schema.md).
 
 ```json
 {

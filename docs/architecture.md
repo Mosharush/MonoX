@@ -19,6 +19,13 @@ adapter boundaries. Stable here does not mean every remote or cloud path has com
 Every workspace with `deployment.enabled: true` is discovered as a deployable app. Libraries omit the
 deployment block. Root configuration has no `applications[]` field.
 
+The public structural contract is [`schemas/v2/monox.schema.json`](../schemas/v2/monox.schema.json).
+`create-monox` bundles that document, writes it to `schemas/v2/monox.schema.json` in the generated project and
+refuses to generate a `monox.config.json` that does not validate. Generated Yarn, npm and pnpm CI run the same
+check and fail when the document or the bundled schema bytes drift. See
+[config schema migration](config-schema.md). Product-specific settings stay in workspace deployment blocks and
+add-on config, outside the core schema.
+
 ## Resolution pipeline
 
 The resolver produces one immutable workload wrapper for every base workload and enabled variant. It applies
