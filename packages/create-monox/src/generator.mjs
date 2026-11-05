@@ -171,6 +171,11 @@ export function packageManagerShellCommand(packageManager, args = []) {
 export function normalizeOptions(options = {}) {
   if (options === null || typeof options !== 'object' || Array.isArray(options))
     throw new Error('Generator options must be an object.');
+  if (Object.hasOwn(options, 'remoteProxy')) {
+    throw new Error(
+      'Generation cannot enable the local remote proxy. Every generated project keeps it disabled, and production artifacts never include it.'
+    );
+  }
   const name = validateProjectName(options.name);
   const packageManager = options.packageManager ?? 'yarn';
   if (!PACKAGE_MANAGERS.includes(packageManager))
@@ -615,8 +620,9 @@ function dockerFiles(options) {
     ['infra/local/docker-compose.yml', `name: ${options.name}\nservices:\n${services}`],
     [
       'infra/local/README.md',
-      `# Local Docker\n${localSecretsCommand}\n${options.workspaces.some((workspace) => WORKSPACE_RECIPES[workspace.template].family !== 'javascript') ? `Run \`${packageManagerShellCommand(options.packageManager, ['run', 'bootstrap:toolchains'])}\` first so generated lockfiles and ignored local environment files exist. ` : ''}Run \`docker compose -f infra/local/docker-compose.yml up --build\`. Generated add-ons live in \`infra/docker/addons.compose.yaml\` and can be included with a second \`-f\` flag. All published ports bind to loopback by default.\n`,
+      `# Local Docker\n${localSecretsCommand}\n${options.workspaces.some((workspace) => WORKSPACE_RECIPES[workspace.template].family !== 'javascript') ? `Run \`${packageManagerShellCommand(options.packageManager, ['run', 'bootstrap:toolchains'])}\` first so generated lockfiles and ignored local environment files exist. ` : ''}Run \`docker compose -f infra/local/docker-compose.yml up --build\`. Generated add-ons live in \`infra/docker/addons.compose.yaml\` and can be included with a second \`-f\` flag. All published ports bind to loopback by default.\n\n\`infra/local/remote-proxy.json\` is a disabled local-only proxy. Generation cannot enable it, production artifacts do not include it, and the file contains no credentials.\n`,
     ],
+    ['infra/local/remote-proxy.json', json(disabledRemoteProxyDocument())],
   ]);
   for (const workspace of options.workspaces) {
     if (WORKSPACE_RECIPES[workspace.template].kind === 'library') continue;
@@ -706,6 +712,26 @@ function kubernetesFiles(options) {
       '# Kubernetes\n\n`workloads.yaml` is a fail-closed render gate, not a manifest to apply. Bind an environment target and an immutable image reference from the build receipt before rendering through reviewed MonoX source tooling or an explicit adapter integration. `create-monox@0.2.0` does not install a public `monox` delivery binary, and the generator never emits a guessed or mutable workload image.\n',
     ],
   ]);
+}
+
+function disabledRemoteProxyDocument() {
+  // Keep this document identical to disabledRemoteProxyConfig() in @monox/cloudapter-remote-proxy.
+  // The published generator cannot import that private package; generator tests compare the two.
+  const document = {
+    schemaVersion: '1',
+    enabled: false,
+    listen: { host: '127.0.0.1', port: 0 },
+    allowlist: [],
+    credentialForwarding: 'never',
+  };
+  if (
+    document.enabled !== false ||
+    document.credentialForwarding !== 'never' ||
+    document.allowlist.length !== 0
+  ) {
+    throw new Error('Generated remote proxy must stay disabled and must not forward credentials.');
+  }
+  return document;
 }
 
 function json(value) {

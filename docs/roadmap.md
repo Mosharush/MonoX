@@ -47,6 +47,7 @@ Target evidence:
 - run every selected Compose add-on to health in isolated environments;
 - verify dependency closure, persistent-data ownership and owned-only destroy;
 - keep LocalStack and Mailpit rejected in production;
+- keep the local remote proxy disabled, allowlisted, and out of production artifacts;
 - keep stateful Kubernetes add-ons opt-in and external by default in production.
 
 ### Remote delivery acceptance

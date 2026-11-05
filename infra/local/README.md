@@ -28,3 +28,7 @@ docker compose -f infra/local/docker-compose.yml --profile local down
 
 `yarn local:env` creates random PostgreSQL and Redis passwords in the ignored `infra/local/.env` file and
 refuses to overwrite it. Deleting volumes is intentionally a separate operator action.
+
+`remote-proxy.json` is the optional local remote proxy. It is disabled, binds only to loopback when an
+operator later enables it, and contains no credentials. Compose does not start it. Allowlist, private-range,
+redirect, DNS, and credential behavior is defined by `@monox/cloudapter-remote-proxy`.

@@ -10,6 +10,11 @@ import { validateMonoXConfigV2 } from '../../config/src/index.mjs';
 import { validateDeploymentSpecV2 } from '../../deploy-schema/src/index.mjs';
 import { createKubernetesCloudapter } from '../../cloudapter-kubernetes/src/index.mjs';
 import {
+  assertRemoteProxyAbsentFromProductionArtifacts,
+  disabledRemoteProxyConfig,
+  remoteProxyCredentialFindings,
+} from '../../cloudapter-remote-proxy/src/index.mjs';
+import {
   ADDON_IDS,
   ADDON_RECIPES,
   DELIVERY_TARGETS,
@@ -624,6 +629,45 @@ test('expands transitive service dependencies for durable and observable local s
     'prometheus',
     'tempo',
   ]);
+});
+
+test('generated remote proxy stays disabled and out of production artifacts', async () => {
+  await assert.rejects(
+    generateProject({ name: 'sample-app', remoteProxy: { enabled: true }, dryRun: true }),
+    /cannot enable the local remote proxy/
+  );
+
+  await withTemporaryDirectory(async (parent) => {
+    const destination = join(parent, 'sample-app');
+    await generateProject({ name: 'sample-app', directory: destination, git: false, infra: 'docker' });
+    const proxyPath = join(destination, 'infra/local/remote-proxy.json');
+    const proxy = JSON.parse(await readFile(proxyPath, 'utf8'));
+    assert.deepEqual(proxy, disabledRemoteProxyConfig());
+    assert.equal(proxy.enabled, false);
+    assert.deepEqual(remoteProxyCredentialFindings(proxy), []);
+    const readme = await readFile(join(destination, 'infra/local/README.md'), 'utf8');
+    assert.match(readme, /remote-proxy\.json` is a disabled local-only proxy/);
+    const files = {
+      'infra/local/remote-proxy.json': await readFile(proxyPath, 'utf8'),
+      'infra/local/docker-compose.yml': await readFile(
+        join(destination, 'infra/local/docker-compose.yml'),
+        'utf8'
+      ),
+      'infra/docker/api.Dockerfile': await readFile(join(destination, 'infra/docker/api.Dockerfile'), 'utf8'),
+    };
+    assert.doesNotMatch(files['infra/local/docker-compose.yml'], /remote-proxy/);
+    assert.equal(assertRemoteProxyAbsentFromProductionArtifacts(files), true);
+  });
+
+  const production = createGenerationPlan({
+    name: 'library-app',
+    environment: 'production',
+    workspaces: ['shared=typescript-library'],
+    delivery: 'kubernetes:existing-kubernetes',
+    infra: 'kubernetes',
+  });
+  assert.equal(production.files.includes('infra/local/remote-proxy.json'), false);
+  assert.equal(production.files.includes('infra/kubernetes/workloads.yaml'), true);
 });
 
 test('rejects development-only add-ons in production and invalid delivery combinations', async () => {
