@@ -115,6 +115,14 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@monox/cloudapter-remote-proxy@workspace:packages/cloudapter-remote-proxy":
+  version: 0.0.0-use.local
+  resolution: "@monox/cloudapter-remote-proxy@workspace:packages/cloudapter-remote-proxy"
+  dependencies:
+    "@monox/cloudapter-core": "workspace:^"
+  languageName: unknown
+  linkType: soft
+
 "@monox/cloudapter-ssh@workspace:packages/cloudapter-ssh":
   version: 0.0.0-use.local
   resolution: "@monox/cloudapter-ssh@workspace:packages/cloudapter-ssh"

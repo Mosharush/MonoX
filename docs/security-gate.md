@@ -59,6 +59,26 @@ excerpts.
 - generated fixtures use reserved example domains, synthetic names and non-routable identifiers.
 - production apply requires a CI or OIDC identity and a protected environment.
 
+## Local remote proxy
+
+`@monox/cloudapter-remote-proxy` is an optional loopback adapter for local development. It is disabled by
+default and is not a general-purpose forward proxy. The delivery CLI does not register it. The contract is
+documented in the [package README](../packages/cloudapter-remote-proxy/README.md) and
+[ADR 0006](adr/0006-local-remote-proxy-allowlist.md).
+
+- Every destination must match an allowlist entry of protocol, host, and port. Only `http` and `https` are
+  accepted.
+- Private, loopback, link-local, CGNAT, multicast, documentation, benchmarking, and reserved ranges are
+  denied, including when an entry names them. IPv4-mapped and NAT64 addresses are judged by the embedded IPv4
+  address.
+- Redirects are not followed. A `Location` that fails the same checks is discarded and is not returned.
+- DNS is resolved for the request being checked. A private answer, or a mix of public and private answers,
+  denies the destination. The connection uses only the address that passed that check.
+- Credentials are never forwarded. The proxy strips credential headers, rejects userinfo and credential query
+  parameters, and has no credential configuration.
+- Generated `infra/local/remote-proxy.json` is disabled and contains no credentials. Production environments
+  cannot start the proxy, and Kubernetes, Dockerfile, and Compose artifacts do not include it.
+
 ## 0.2 release boundary
 
 The following evidence is required before a public `0.2.x` package release:

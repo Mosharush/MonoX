@@ -1,0 +1,22 @@
+{
+  "name": "@monox/cloudapter-remote-proxy",
+  "version": "0.2.0",
+  "description": "Optional loopback proxy that forwards only explicit local-development destinations.",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.mjs",
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node ../../scripts/build-workspace.mjs",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@monox/cloudapter-core": "workspace:^"
+  },
+  "engines": {
+    "node": ">=22.22.2 <23.0.0 || >=24.15.0 <25.0.0 || >=26.0.0 <27.0.0"
+  }
+}

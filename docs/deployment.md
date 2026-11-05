@@ -157,6 +157,7 @@ atomically.
 | Path                 | What the source currently does                                                                                 | What is not yet proven                                |
 | -------------------- | -------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
 | Local Docker Compose | Built-in allowlisted executor; bounded probes; owned-only rollback and destroy                                 | Full catalog runtime matrix                           |
+| Local remote proxy   | Disabled loopback adapter; explicit protocol, host, and port allowlist; no production artifact                 | Not a production egress path                          |
 | PM2                  | Renders an ecosystem file and staged promotion sequence; injected transport; rollback hook on failed readiness | Disposable-host and long-running soak tests           |
 | Generic SSH          | Requires server, identity and pinned-known-host references; injected argv transport                            | Live host promotion and rollback                      |
 | Existing Coolify     | Renders a scoped service request for `POST /api/v1/services`; injected HTTP transport                          | Authenticated staging API create, deploy and rollback |

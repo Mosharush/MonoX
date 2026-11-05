@@ -122,6 +122,10 @@ service ownership. Remote execution-capable adapters accept injected transports.
 context, read an SSH key, or construct a shell string from configuration. AWS and GCP adapters are
 deliberately plan-only in 0.2.0.
 
+`@monox/cloudapter-remote-proxy` is a separate optional loopback adapter. It is disabled by default, checks
+every destination against an explicit allowlist, and is not selected by the delivery CLI. Production artifacts
+do not enable it.
+
 ## Task graph
 
 `@monox/tasks` plans workspace scripts as a deterministic graph. Task identity is `package#task`. Dependency

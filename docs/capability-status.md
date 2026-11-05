@@ -46,6 +46,7 @@ only what appears here with passing release evidence.
 | Delivery path                           | Status                          | Current evidence                                                    | Remaining evidence                                        |
 | --------------------------------------- | ------------------------------- | ------------------------------------------------------------------- | --------------------------------------------------------- |
 | Local Docker Compose                    | Verified in release             | Hosted doctor, deploy, health, status and owned-destroy smoke       | Complete generated add-on runtime matrix                  |
+| Local remote proxy                      | Verified in source              | Allowlist, private-range, redirect, DNS, and credential tests       | Not a production egress path                              |
 | PM2 on an existing host                 | Implemented, acceptance pending | Ecosystem rendering, health gate and rollback-hook tests            | Disposable-host promotion and rollback                    |
 | Generic SSH transport                   | Implemented, acceptance pending | Reference validation, argv-only actions and host-verification tests | Disposable-host connection test                           |
 | Shared Docker/Coolify Compose renderer  | Source-tested                   | Immutable images, storage references, probes and offline CLI plans  | External builds, file provisioning and routing acceptance |

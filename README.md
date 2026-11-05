@@ -181,9 +181,11 @@ primitive, and plan-only AWS and GCP providers. Adapter methods are versioned th
 `validate`, `plan`, `render`, `apply`, `status`, `rollback` and `destroy`.
 
 Local Docker Compose has a built-in executor that runs only allowlisted `docker compose` argument arrays with
-`shell: false`, bounded readiness checks and explicit owned services. PM2, SSH, Coolify and Kubernetes retain
-explicitly injected transports, so the CLI does not infer a host, credential or cluster context. AWS and GCP
-are plan-only in 0.2.0; provider executors and live sandbox apply are not part of the stable support contract.
+`shell: false`, bounded readiness checks and explicit owned services. An optional local remote proxy can reach
+explicit development destinations from loopback; it is disabled by default, is not selected by the delivery
+CLI, and is never enabled in production artifacts. PM2, SSH, Coolify and Kubernetes retain explicitly injected
+transports, so the CLI does not infer a host, credential or cluster context. AWS and GCP are plan-only in
+0.2.0; provider executors and live sandbox apply are not part of the stable support contract.
 
 ## Work on MonoX
 

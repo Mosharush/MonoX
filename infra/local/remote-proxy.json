@@ -1,0 +1,10 @@
+{
+  "schemaVersion": "1",
+  "enabled": false,
+  "listen": {
+    "host": "127.0.0.1",
+    "port": 0
+  },
+  "allowlist": [],
+  "credentialForwarding": "never"
+}
