@@ -25,6 +25,7 @@ only what appears here with passing release evidence.
 | `deploy`, `apply`, `status`, `rollback`, `destroy` orchestration | Implemented, acceptance pending | Built-in local executor plus injected-adapter tests           | Live remote adapter-specific acceptance     |
 | Stale-plan rejection                                             | Verified in source              | Source, target-state, adapter and plan-content tests          | Concurrent external-state test              |
 | Production identity gate                                         | Verified in source              | Protected environment, `CI=true` and identity-reference tests | Hosted protected-environment run            |
+| Task graph, selective execution and local cache                  | Verified in source              | Identity, dependency, cache-key, dry-run and fail-open tests  | Selective public CI is not approved         |
 
 ## Generator and catalog
 

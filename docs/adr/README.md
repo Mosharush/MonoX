@@ -9,6 +9,7 @@ Accepted decisions remain in this log when they are replaced so contributors can
 | [0002](0002-render-is-separate-from-apply.md)              | Accepted | Keep render separate from apply                       |
 | [0003](0003-model-output-is-not-executable-shell.md)       | Accepted | Treat model output as data, never executable shell    |
 | [0004](0004-package-manager-adapters.md)                   | Accepted | Keep package managers behind small generator adapters |
+| [0005](0005-local-task-cache-and-full-ci-gate.md)          | Accepted | Keep task cache local and public CI on the full gate  |
 
 New decisions use the next four-digit number. A change that replaces an accepted decision adds a new ADR and
 marks the old record as superseded instead of rewriting history.

@@ -81,8 +81,8 @@ flowchart LR
 
 The public source tree contains these package groups:
 
-- Core: config discovery and resolution, workspace discovery, affected calculation, development runner and
-  agent guidance compilation.
+- Core: config discovery and resolution, workspace discovery, affected calculation, local task-graph planning,
+  development runner and agent guidance compilation.
 - Runtime: app lifecycle, structured logging, telemetry primitives, service discovery, Fastify integration and
   test utilities.
 - Delivery: deployment schemas, Kubernetes rendering, the Cloudapter contract, delivery adapters and provider
@@ -121,6 +121,17 @@ The local Docker adapter uses a built-in executor with fixed argument arrays, `s
 service ownership. Remote execution-capable adapters accept injected transports. They do not infer a kube
 context, read an SSH key, or construct a shell string from configuration. AWS and GCP adapters are
 deliberately plan-only in 0.2.0.
+
+## Task graph
+
+`@monox/tasks` plans workspace scripts as a deterministic graph. Task identity is `package#task`. Dependency
+edges are explicit `task` or `^task` references. Cache keys are local SHA-256 values over the task definition,
+script, every declared input, dependency keys and declared environment names. Dry-run states why each task
+runs, skips or restores. Invalid, incomplete or uncovered changes fail open by running tasks without skipping
+or restoring. The cache directory is `.monox/cache/tasks` and is never a remote service.
+
+Public CI does not consult this plan. The quality workflow remains the complete repository gate until
+selective CI is approved separately. The contract is specified in [task graph](task-graph.md).
 
 ## Runtime contract
 

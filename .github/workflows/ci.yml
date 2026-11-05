@@ -43,6 +43,8 @@ jobs:
             --retry-delay 1 --retry-max-time 30 http://127.0.0.1:8080/healthz
           node scripts/check-static-web-container.mjs
 
+  # Selective task execution is not approved for public CI.
+  # This job remains the complete repository gate.
   quality:
     name: Quality and compatibility (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
