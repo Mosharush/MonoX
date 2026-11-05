@@ -135,9 +135,16 @@ test('catalog contains every approved built-in template and checksums all recipe
   assert.equal(ADDON_IDS.length, 28);
   const catalog = catalogManifest();
   assert.match(catalog.integrity, /^sha256-[A-Za-z0-9+/]{43}=$/);
-  const version11Recipes = new Set(['angular-web', 'php-laravel-api', 'react-vite-web', 'vue-vite-web']);
+  const updatedRecipeVersions = new Map([
+    ['angular-web', '1.1.0'],
+    ['php-laravel-api', '1.1.0'],
+    ['node-fastify-api', '1.0.1'],
+    ['react-vite-web', '1.1.1'],
+    ['vue-vite-web', '1.1.1'],
+    ['sveltekit-web', '1.0.1'],
+  ]);
   for (const [id, entry] of Object.entries(catalog.workspaces)) {
-    assert.equal(entry.version, version11Recipes.has(id) ? '1.1.0' : '1.0.0');
+    assert.equal(entry.version, updatedRecipeVersions.get(id) ?? '1.0.0');
     assert.match(entry.integrity, /^sha256-/);
   }
   for (const entry of Object.values(catalog.addons)) {
@@ -147,6 +154,47 @@ test('catalog contains every approved built-in template and checksums all recipe
   for (const definition of Object.values(DELIVERY_TARGETS)) {
     assert.deepEqual(Object.keys(definition), ['provider', 'provisioner', 'transport', 'runtime']);
   }
+});
+
+test('generated Fastify and Vite recipes exclude vulnerable dependency versions', async () => {
+  await withTemporaryDirectory(async (parent) => {
+    const destination = join(parent, 'patched-dependencies');
+    const selections = [
+      ['api', 'node-fastify-api', 'fastify', [5, 12, 6]],
+      ['react', 'react-vite-web', 'vite', [8, 1, 6]],
+      ['vue', 'vue-vite-web', 'vite', [8, 1, 6]],
+      ['svelte', 'sveltekit-web', 'vite', [8, 1, 6]],
+    ];
+    await generateProject({
+      name: 'patched-dependencies',
+      directory: destination,
+      workspaces: selections.map(([name, template]) => ({ name, template })),
+      infra: 'none',
+      git: false,
+    });
+
+    // Security floors: GHSA-389g-gv7q-r4x8 and GHSA-rq7h-c2jc-7f22.
+    // Keep deterministic pins on the reviewed release lines; newer minors need separate review.
+    for (const [name, template, dependency, minimum] of selections) {
+      const manifest = JSON.parse(await readFile(join(destination, 'apps', name, 'package.json'), 'utf8'));
+      const version = manifest.dependencies?.[dependency] ?? manifest.devDependencies?.[dependency];
+      assert.match(version, /^\d+\.\d+\.\d+$/, `${template}: exact ${dependency} version`);
+      const [major, minor, patch] = version.split('.').map(Number);
+      assert.equal(major, minimum[0], `${template}: retain ${dependency} major`);
+      assert.equal(minor, minimum[1], `${template}: retain reviewed ${dependency} minor`);
+      assert.ok(
+        patch >= minimum[2],
+        `${template}: ${dependency}@${version} is below patched ${minimum.join('.')}`
+      );
+    }
+
+    const lock = JSON.parse(await readFile(join(destination, 'monox.lock'), 'utf8'));
+    const catalog = catalogManifest();
+    for (const selection of lock.selection.workspaces) {
+      assert.equal(selection.version, catalog.workspaces[selection.template].version);
+      assert.equal(selection.integrity, catalog.workspaces[selection.template].integrity);
+    }
+  });
 });
 
 test('renders and validates the complete JS, Python, PHP and Go workspace catalog', async () => {

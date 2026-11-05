@@ -47,7 +47,7 @@ function renderJavaScript(add, selection, project, definition) {
       add('src/server.mjs', nodeHttpServer(definition.port));
       break;
     case 'node-fastify-api':
-      manifest = nodeManifest(base, deployment, { fastify: '5.10.0' });
+      manifest = nodeManifest(base, deployment, { fastify: '5.12.7' });
       add('src/server.mjs', fastifyServer(definition.port));
       break;
     case 'node-express-api':
@@ -112,7 +112,7 @@ function renderJavaScript(add, selection, project, definition) {
     case 'react-vite-web':
       manifest = staticJsManifest(base, deployment, {
         dependencies: { react: '19.2.8', 'react-dom': '19.2.8' },
-        devDependencies: { '@vitejs/plugin-react': '6.0.4', vite: '8.1.5' },
+        devDependencies: { '@vitejs/plugin-react': '6.0.4', vite: '8.1.6' },
       });
       add('index.html', htmlEntry('app', '/src/main.jsx'));
       add('src/main.jsx', reactEntry(project.name));
@@ -121,7 +121,7 @@ function renderJavaScript(add, selection, project, definition) {
     case 'vue-vite-web':
       manifest = staticJsManifest(base, deployment, {
         dependencies: { vue: '3.5.40' },
-        devDependencies: { '@vitejs/plugin-vue': '6.0.8', vite: '8.1.5' },
+        devDependencies: { '@vitejs/plugin-vue': '6.0.8', vite: '8.1.6' },
       });
       add('index.html', htmlEntry('app', '/src/main.js'));
       add('src/App.vue', vueApp(project.name));
@@ -170,7 +170,7 @@ function renderJavaScript(add, selection, project, definition) {
           '@sveltejs/kit': '2.70.1',
           '@sveltejs/vite-plugin-svelte': '7.2.0',
           svelte: '5.56.8',
-          vite: '8.1.5',
+          vite: '8.1.6',
         },
         deployment,
       };

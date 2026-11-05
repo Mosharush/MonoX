@@ -16,6 +16,7 @@ export const WORKSPACE_RECIPES = Object.freeze({
     port: 3001,
   }),
   'node-fastify-api': recipe({
+    version: '1.0.1',
     family: 'javascript',
     language: 'javascript',
     framework: 'fastify',
@@ -52,7 +53,7 @@ export const WORKSPACE_RECIPES = Object.freeze({
     schedule: '0 * * * *',
   }),
   'react-vite-web': recipe({
-    version: '1.1.0',
+    version: '1.1.1',
     family: 'javascript',
     language: 'javascript',
     framework: 'react-vite',
@@ -60,7 +61,7 @@ export const WORKSPACE_RECIPES = Object.freeze({
     port: 4173,
   }),
   'vue-vite-web': recipe({
-    version: '1.1.0',
+    version: '1.1.1',
     family: 'javascript',
     language: 'javascript',
     framework: 'vue-vite',
@@ -82,6 +83,7 @@ export const WORKSPACE_RECIPES = Object.freeze({
     port: 3000,
   }),
   'sveltekit-web': recipe({
+    version: '1.0.1',
     family: 'javascript',
     language: 'javascript',
     framework: 'sveltekit',

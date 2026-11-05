@@ -47,7 +47,8 @@ only what appears here with passing release evidence.
 | Local Docker Compose                    | Verified in release             | Hosted doctor, deploy, health, status and owned-destroy smoke       | Complete generated add-on runtime matrix                  |
 | PM2 on an existing host                 | Implemented, acceptance pending | Ecosystem rendering, health gate and rollback-hook tests            | Disposable-host promotion and rollback                    |
 | Generic SSH transport                   | Implemented, acceptance pending | Reference validation, argv-only actions and host-verification tests | Disposable-host connection test                           |
-| Docker on SSH, EC2 or Compute           | Cataloged, unavailable in 0.2.0 | Catalog entries fail before generator writes                        | Composite build, transport, health and rollback adapter   |
+| Shared Docker/Coolify Compose renderer  | Source-tested                   | Immutable images, storage references, probes and offline CLI plans  | External builds, file provisioning and routing acceptance |
+| Docker on SSH, EC2 or Compute           | Source plan/render only         | Generic CLI Compose plans; generator delivery entries unavailable   | Composite build, transport, health and rollback adapter   |
 | Existing Coolify                        | Implemented, acceptance pending | Request rendering, redaction and scope validation tests             | Authenticated staging create, deploy, status and rollback |
 | Existing Kubernetes                     | Implemented, acceptance pending | Offline v2 rendering, policy goldens and injected transport tests   | Cluster apply and rollback using the v2 adapter           |
 | AWS EC2, EKS, Coolify and static        | Plan-only                       | Deterministic Pulumi intent and static-key rejection                | Automation API executor plus sandbox lifecycle            |

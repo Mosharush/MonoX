@@ -25,6 +25,9 @@ npm create monox@latest -- my-product \
 Use `--dry-run` to validate selections and print every planned path without creating a directory, initializing
 Git or installing dependencies.
 
+For the next steps, see the [generated project cookbook](../../docs/generated-project-cookbook.md): inspect
+contracts, prepare the dependency lockfile, run generated CI checks and understand health and delivery limits.
+
 ## Options
 
 | Option                        | Behavior                                                    |
@@ -181,6 +184,8 @@ the current generator fails validation.
 
 ## Development
 
+Run from the MonoX source repository root:
+
 ```sh
-node --test packages/create-monox/test
+node --test packages/create-monox/test/*.test.mjs
 ```

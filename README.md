@@ -25,6 +25,9 @@ to keep in sync.
 [Deployment contract](docs/deployment.md) | [create-monox on npm](https://www.npmjs.com/package/create-monox)
 | [Security gate](docs/security-gate.md)
 
+The repository's static site uses a separate [CI-gated deployment path](docs/site-deployment.md). This does
+not enable automatic hosting for generated projects.
+
 ## Generate a product
 
 Create a project from the stable channel:
@@ -74,6 +77,9 @@ my-product/
 
 The generator refuses nonempty and symlink destinations. Bundled recipes are versioned and deterministic; it
 does not clone a live repository. Unsupported combinations fail before project files are written.
+
+Follow the [generated project cookbook](docs/generated-project-cookbook.md) to inspect the output, prepare a
+dependency lockfile, run the generated CI checks and verify the example API's health endpoint.
 
 ## What MonoX wires for you
 
@@ -169,10 +175,10 @@ add-ons are opt-in; production defaults to managed or external services.
 
 ## Delivery adapters
 
-The source includes a built-in local Docker Compose executor, bundled PM2, Coolify and Kubernetes adapters
-that require injected transports, an SSH transport primitive, and plan-only AWS and GCP providers. Adapter
-methods are versioned through `Cloudapter`: `doctor`, `validate`, `plan`, `render`, `apply`, `status`,
-`rollback` and `destroy`.
+The source includes a built-in local Docker Compose executor, a shared generic Docker/Coolify Compose
+renderer, bundled PM2, Coolify and Kubernetes adapters that require injected transports, an SSH transport
+primitive, and plan-only AWS and GCP providers. Adapter methods are versioned through `Cloudapter`: `doctor`,
+`validate`, `plan`, `render`, `apply`, `status`, `rollback` and `destroy`.
 
 Local Docker Compose has a built-in executor that runs only allowlisted `docker compose` argument arrays with
 `shell: false`, bounded readiness checks and explicit owned services. PM2, SSH, Coolify and Kubernetes retain
