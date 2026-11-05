@@ -1,0 +1,61 @@
+{
+  "$schema": "./schemas/v2/monox.schema.json",
+  "schemaVersion": "2",
+  "project": {
+    "name": "example",
+    "workspaceGlobs": ["apps/*", "packages/*"],
+    "defaultEnvironment": "development"
+  },
+  "boundaries": {
+    "apps": ["packages"],
+    "packages": ["packages"],
+    "infra": ["packages"]
+  },
+  "workloadProfiles": {},
+  "environments": {
+    "development": {
+      "production": false,
+      "protected": false,
+      "bindings": [{ "target": "local-docker", "selector": { "workloads": ["*"] } }]
+    },
+    "production": {
+      "production": true,
+      "protected": true,
+      "bindings": [{ "target": "production-kubernetes", "selector": { "kinds": ["service"] } }]
+    }
+  },
+  "targets": {
+    "local-docker": {
+      "provider": "generic",
+      "provisioner": "none",
+      "transport": "local",
+      "runtime": "docker",
+      "bindings": { "namespace": "example-local" }
+    },
+    "production-kubernetes": {
+      "provider": "generic",
+      "provisioner": "none",
+      "transport": "kubernetes-api",
+      "runtime": "kubernetes",
+      "bindings": {
+        "namespace": "example",
+        "registry": "registry.example.invalid/example",
+        "domain": "app.example.invalid",
+        "identityRef": "runtime-identity",
+        "secretStoreRef": "runtime-secrets"
+      },
+      "clusterRef": "production-cluster",
+      "ttlHours": 24
+    }
+  },
+  "addons": {
+    "redis": {
+      "recipe": "redis",
+      "enabled": true,
+      "mode": "bundled",
+      "environments": ["development"],
+      "config": { "VERSION": "8" },
+      "secretRefs": ["redis-password"]
+    }
+  }
+}

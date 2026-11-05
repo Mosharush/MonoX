@@ -25,13 +25,14 @@ leaves repository initialization to you, and `--no-install` deliberately leaves 
 
 Inspect these files before changing product code:
 
-| File                       | What to review                                                                                                        |
-| -------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `AGENTS.md`                | Workspace map, dependency direction and required checks for people and agents. These are instructions, not a sandbox. |
-| `apps/*/package.json`      | Each workspace's scripts, dependencies and `deployment` contract.                                                     |
-| `monox.config.json`        | Root boundaries, environments and target bindings.                                                                    |
-| `monox.lock`               | The resolved generator, recipe and delivery selection.                                                                |
-| `.github/workflows/ci.yml` | The checks this generated project will actually run.                                                                  |
+| File                           | What to review                                                                                                        |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| `AGENTS.md`                    | Workspace map, dependency direction and required checks for people and agents. These are instructions, not a sandbox. |
+| `apps/*/package.json`          | Each workspace's scripts, dependencies and `deployment` contract.                                                     |
+| `monox.config.json`            | Root boundaries, environments and target bindings.                                                                    |
+| `schemas/v2/monox.schema.json` | Public project schema copied from the generator contract.                                                             |
+| `monox.lock`                   | The resolved generator, recipe and delivery selection.                                                                |
+| `.github/workflows/ci.yml`     | The checks this generated project will actually run.                                                                  |
 
 When changing how a workload starts, listens or reports health, update its `package.json.deployment` along
 with its implementation. Keep reusable code in `packages/`; packages must not import from `apps/`.
@@ -42,12 +43,19 @@ This check works before dependency installation:
 
 ```sh
 node scripts/verify-monox-lock.mjs
+node scripts/verify-monox-config.mjs
 ```
 
-Expect `MonoX lock verified`. In 0.2.0 the verifier checks lock format version 1 and recomputes the SHA-256
-hash of `lock.selection`, comparing it with `selectionIntegrity`. The selection records the workspace and
-add-on recipes, their versions and integrity values, and the chosen delivery target. The lock also records
-generator and catalog metadata outside that selection hash.
+Expect `MonoX lock verified`, then `MonoX project configuration matches schema v2`.
+
+In 0.2.0 the lock verifier checks lock format version 1 and recomputes the SHA-256 hash of `lock.selection`,
+comparing it with `selectionIntegrity`. The selection records the workspace and add-on recipes, their versions
+and integrity values, and the chosen delivery target. The lock also records generator and catalog metadata
+outside that selection hash.
+
+The config check loads `monox.config.json` and `schemas/v2/monox.schema.json`. It fails when the document
+violates the schema, including an unknown root property, or when the schema file bytes differ from the copy
+recorded at generation.
 
 This is a selection consistency check. It does not hash your application source, compare source files with the
 recipes, authenticate a lock author or replace a package-manager lockfile. Editing `apps/api/src/server.mjs`
@@ -69,6 +77,7 @@ After the lockfile exists, run the sequence from the generated workflow:
 test -f package-lock.json
 npx --yes npm@12.0.1 ci
 node scripts/verify-monox-lock.mjs
+node scripts/verify-monox-config.mjs
 npx --yes npm@12.0.1 test
 npx --yes npm@12.0.1 run test:workspaces
 npx --yes npm@12.0.1 run build

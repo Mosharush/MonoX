@@ -1,0 +1,190 @@
+[
+  {
+    "name": "product-specific root property",
+    "path": "$.productTier",
+    "document": {
+      "$schema": "./schemas/v2/monox.schema.json",
+      "schemaVersion": "2",
+      "productTier": "internal",
+      "project": {
+        "name": "example",
+        "workspaceGlobs": ["apps/*"]
+      },
+      "boundaries": {},
+      "workloadProfiles": {},
+      "environments": {
+        "development": {
+          "bindings": [{ "target": "local-docker", "selector": { "workloads": ["*"] } }]
+        }
+      },
+      "targets": {
+        "local-docker": {
+          "provider": "generic",
+          "provisioner": "none",
+          "transport": "local",
+          "runtime": "docker"
+        }
+      },
+      "addons": {}
+    }
+  },
+  {
+    "name": "wrong schema version",
+    "path": "$.schemaVersion",
+    "document": {
+      "schemaVersion": "1",
+      "project": { "name": "example", "workspaceGlobs": ["apps/*"] },
+      "boundaries": {},
+      "workloadProfiles": {},
+      "environments": {
+        "development": {
+          "bindings": [{ "target": "local-docker", "selector": {} }]
+        }
+      },
+      "targets": {
+        "local-docker": {
+          "provider": "generic",
+          "provisioner": "none",
+          "transport": "local",
+          "runtime": "docker"
+        }
+      },
+      "addons": {}
+    }
+  },
+  {
+    "name": "unknown target runtime",
+    "path": "$.targets[\"local-docker\"].runtime",
+    "document": {
+      "schemaVersion": "2",
+      "project": { "name": "example", "workspaceGlobs": ["apps/*"] },
+      "boundaries": {},
+      "workloadProfiles": {},
+      "environments": {
+        "development": {
+          "bindings": [{ "target": "local-docker", "selector": {} }]
+        }
+      },
+      "targets": {
+        "local-docker": {
+          "provider": "generic",
+          "provisioner": "none",
+          "transport": "local",
+          "runtime": "nomad"
+        }
+      },
+      "addons": {}
+    }
+  },
+  {
+    "name": "duplicate workspace glob",
+    "path": "$.project.workspaceGlobs[1]",
+    "document": {
+      "schemaVersion": "2",
+      "project": { "name": "example", "workspaceGlobs": ["apps/*", "apps/*"] },
+      "boundaries": {},
+      "workloadProfiles": {},
+      "environments": {
+        "development": {
+          "bindings": [{ "target": "local-docker", "selector": {} }]
+        }
+      },
+      "targets": {
+        "local-docker": {
+          "provider": "generic",
+          "provisioner": "none",
+          "transport": "local",
+          "runtime": "docker"
+        }
+      },
+      "addons": {}
+    }
+  },
+  {
+    "name": "ttl below the schema minimum",
+    "path": "$.targets[\"production-kubernetes\"].ttlHours",
+    "document": {
+      "schemaVersion": "2",
+      "project": { "name": "example", "workspaceGlobs": ["apps/*"] },
+      "boundaries": {},
+      "workloadProfiles": {},
+      "environments": {
+        "preview": {
+          "bindings": [{ "target": "production-kubernetes", "selector": {} }]
+        }
+      },
+      "targets": {
+        "production-kubernetes": {
+          "provider": "generic",
+          "provisioner": "none",
+          "transport": "kubernetes-api",
+          "runtime": "kubernetes",
+          "ttlHours": 0
+        }
+      },
+      "addons": {}
+    }
+  },
+  {
+    "name": "missing targets",
+    "path": "$.targets",
+    "document": {
+      "schemaVersion": "2",
+      "project": { "name": "example", "workspaceGlobs": ["apps/*"] },
+      "boundaries": {},
+      "workloadProfiles": {},
+      "environments": {
+        "development": {
+          "bindings": [{ "target": "local-docker", "selector": {} }]
+        }
+      },
+      "addons": {}
+    }
+  },
+  {
+    "name": "add-on mode outside the enum",
+    "path": "$.addons.redis.mode",
+    "document": {
+      "schemaVersion": "2",
+      "project": { "name": "example", "workspaceGlobs": ["apps/*"] },
+      "boundaries": {},
+      "workloadProfiles": {},
+      "environments": {
+        "development": {
+          "bindings": [{ "target": "local-docker", "selector": {} }]
+        }
+      },
+      "targets": {
+        "local-docker": {
+          "provider": "generic",
+          "provisioner": "none",
+          "transport": "local",
+          "runtime": "docker"
+        }
+      },
+      "addons": {
+        "redis": { "recipe": "redis", "enabled": true, "mode": "local" }
+      }
+    }
+  },
+  {
+    "name": "no environments",
+    "path": "$.environments",
+    "document": {
+      "schemaVersion": "2",
+      "project": { "name": "example", "workspaceGlobs": ["apps/*"] },
+      "boundaries": {},
+      "workloadProfiles": {},
+      "environments": {},
+      "targets": {
+        "local-docker": {
+          "provider": "generic",
+          "provisioner": "none",
+          "transport": "local",
+          "runtime": "docker"
+        }
+      },
+      "addons": {}
+    }
+  }
+]

@@ -3,6 +3,11 @@
 `@monox/config` validates MonoX project configuration, discovers enabled `package.json.deployment` v2 blocks
 and resolves them for one environment and one unambiguous delivery target.
 
+The structural contract is [`schemas/v2/monox.schema.json`](../../schemas/v2/monox.schema.json). Repository
+validation and `create-monox` both use that document. This package adds reference, secret and target-conflict
+checks that JSON Schema does not express. See [config schema migration](../../docs/config-schema.md) before
+changing the public schema. Product-specific fields stay out of the core schema.
+
 Resolution order is fixed:
 
 1. secure built-in defaults

@@ -138,8 +138,10 @@ pass the release verification pipeline; execution must fail closed while that ma
 - delivery target integrity,
 - an integrity hash over the complete resolved selection.
 
-Generated CI runs `scripts/verify-monox-lock.mjs`. Re-running the same package version with the same options
-produces identical tracked content and file digests.
+Generated CI runs `scripts/verify-monox-lock.mjs` and `scripts/verify-monox-config.mjs` for Yarn, npm and pnpm
+projects. The config check validates `monox.config.json` against the bundled public v2 schema and fails when
+that schema file drifts from the bytes written at generation. Re-running the same package version with the
+same options produces identical tracked content and file digests.
 
 ## Programmatic API
 

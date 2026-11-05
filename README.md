@@ -87,7 +87,7 @@ dependency lockfile, run the generated CI checks and verify the example API's he
 - package-level human and coding-agent boundaries;
 - runtime health, readiness, liveness, logging and telemetry contracts;
 - selected local services with no tracked default passwords;
-- generated CI with immutable installs, tests and builds;
+- generated CI with immutable installs, public schema validation, tests and builds;
 - non-root container defaults and typed Kubernetes resources;
 - deployment plans bound to source, config, target state and adapter digests.
 
