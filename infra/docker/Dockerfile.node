@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-FROM node:22.23.1-bookworm-slim@sha256:6c74791e557ce11fc957704f6d4fe134a7bc8d6f5ca4403205b2966bd488f6b3 AS build
+FROM node:22.23.3-bookworm-slim@sha256:43ac6c60b8f89723f746e8a92ce91abd5017e627ce1ddfe4238355d3a30b772c AS build
 
 WORKDIR /workspace
 ENV CI=true \
@@ -17,7 +17,7 @@ RUN test -f yarn.lock && yarn install --immutable
 RUN yarn workspace "${MONOX_WORKSPACE}" build
 RUN yarn workspaces focus "${MONOX_WORKSPACE}" --production
 
-FROM node:22.23.1-bookworm-slim@sha256:6c74791e557ce11fc957704f6d4fe134a7bc8d6f5ca4403205b2966bd488f6b3 AS runtime
+FROM node:22.23.3-bookworm-slim@sha256:43ac6c60b8f89723f746e8a92ce91abd5017e627ce1ddfe4238355d3a30b772c AS runtime
 
 ARG MONOX_WORKSPACE=@monox/api
 
