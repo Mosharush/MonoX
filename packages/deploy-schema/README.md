@@ -56,6 +56,11 @@ values, external secret references, CPU, memory, storage and accelerators, telem
 autoscaling metrics. Environment and variant overlays are strict RFC 7396 patches. Unknown properties and
 changes to identity, kind, build strategy or runtime language are rejected.
 
+Use `runtime.language: 'container'` for image-based tools such as a reverse proxy or database whose
+implementation language is not an application contract. Their executable remains an explicit argument array in
+`runtime.command`, and image, probe and security validation still apply. Use a language-specific value when
+the application runtime is known.
+
 ## Security boundaries
 
 - `latest` images are rejected.

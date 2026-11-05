@@ -21,6 +21,7 @@
     "@monox/affected": "workspace:^",
     "@monox/cloudapter-coolify": "workspace:^",
     "@monox/cloudapter-core": "workspace:^",
+    "@monox/cloudapter-docker": "workspace:^",
     "@monox/cloudapter-kubernetes": "workspace:^",
     "@monox/cloudapter-local": "workspace:^",
     "@monox/cloudapter-pm2": "workspace:^",

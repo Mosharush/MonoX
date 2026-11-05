@@ -6,6 +6,7 @@ import {
   deterministicDigest,
 } from '@monox/cloudapter-core';
 import { assertValidDeploymentSpecV2 } from '@monox/deploy-schema';
+import { renderDockerCompose } from '@monox/cloudapter-docker';
 
 function id(workload) {
   return workload.deployment?.id ?? workload.id;
@@ -32,62 +33,8 @@ function coolifyReferences(target) {
   };
 }
 
-function image(deployment) {
-  const candidate = deployment.build?.image;
-  if (typeof candidate === 'string') return candidate;
-  if (candidate?.repository && candidate?.tag && candidate.tag !== 'latest')
-    return `${candidate.repository}:${candidate.tag}`;
-  throw new TypeError(`${deployment.id} requires an immutable image for Coolify`);
-}
-
-function composeEnvironment(deployment) {
-  const result = { ...deployment.env?.values };
-  for (const reference of deployment.env?.secretRefs ?? []) {
-    const name = reference.target ?? reference.name.replace(/-/g, '_').toUpperCase();
-    result[name] = `\${${name}:?required}`;
-  }
-  return Object.fromEntries(Object.entries(result).sort(([left], [right]) => left.localeCompare(right)));
-}
-
 function compose(workloads, target, name) {
-  const references = coolifyReferences(target);
-  const services = {};
-  for (const workload of workloads) {
-    const deployment = workload.deployment;
-    const ports = deployment.network?.ports ?? [];
-    services[deployment.id] = {
-      image: image(deployment),
-      command: deployment.runtime?.command,
-      environment: composeEnvironment(deployment),
-      expose: ports.map((port) => String(port.containerPort)),
-      healthcheck: deployment.probes?.readiness
-        ? {
-            test: probeCommand(deployment.probes.readiness, deployment),
-            interval: `${deployment.probes.readiness.periodSeconds ?? 10}s`,
-            timeout: `${deployment.probes.readiness.timeoutSeconds ?? 3}s`,
-            retries: deployment.probes.readiness.failureThreshold ?? 3,
-          }
-        : undefined,
-      labels: coolifyLabels(deployment, references.domain),
-    };
-  }
-  return { name, services };
-}
-
-function probeCommand(probe, deployment) {
-  const port =
-    typeof probe.port === 'string'
-      ? deployment.network?.ports?.find((candidate) => candidate.name === probe.port)?.containerPort
-      : (probe.port ?? deployment.network?.ports?.[0]?.containerPort);
-  if (probe.type === 'exec') return ['CMD', ...probe.command];
-  if (probe.type === 'tcp') return ['CMD', 'nc', '-z', '127.0.0.1', String(port)];
-  return ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', `http://127.0.0.1:${port}${probe.path}`];
-}
-
-function coolifyLabels(deployment, targetDomain) {
-  const domain =
-    deployment.adapterOverrides?.coolify?.domain ?? deployment.network?.routes?.[0]?.host ?? targetDomain;
-  return domain ? [`coolify.managed=true`, `coolify.domain=${domain}`] : ['coolify.managed=true'];
+  return renderDockerCompose(workloads, { name, mode: 'coolify', domain: target.bindings?.domain });
 }
 
 function requestFor(context, workloads) {
